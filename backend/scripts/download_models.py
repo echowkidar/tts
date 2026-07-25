@@ -25,6 +25,11 @@ MODEL_CATALOG: dict[str, dict[str, str]] = {
         "size": "~350 MB",
         "label": "Kokoro-82M",
     },
+    "kitten": {
+        "repo_id": "KittenML/kitten-tts-mini-0.8",
+        "size": "~79 MB",
+        "label": "Kitten TTS Mini",
+    },
     "chatterbox": {
         "repo_id": "ResembleAI/chatterbox",
         "size": "~500 MB",

@@ -6,6 +6,7 @@ A local web UI for **multiple open-source TTS models** — switch engines from t
 
 - **VibeVoice-1.5B** (default) — Microsoft's multilingual voice-cloning model, up to 4 speakers, ~5.4 GB. MIT.
 - **Kokoro-82M** by [hexgrad](https://huggingface.co/hexgrad/Kokoro-82M) — fast, lightweight (82M), built-in voices across English / Japanese / Mandarin. Apache-2.0.
+- **Kitten TTS Mini** by [KittenML](https://huggingface.co/KittenML/kitten-tts-mini-0.8) — ultra-light ~80M **ONNX** model, ~79 MB, 8 English voices, 24 kHz. Runs on CPU with no torch/GPU — the "runs on anything" tier. Apache-2.0.
 - **Chatterbox Multilingual V3** by [Resemble AI](https://huggingface.co/ResembleAI/chatterbox) — zero-shot voice cloning across 23 languages. Runs in its own isolated environment. MIT.
 - **OmniVoice** by [k2-fsa](https://huggingface.co/k2-fsa/OmniVoice) — 0.6B zero-shot multilingual TTS (600+ languages) with Clone / Design / Auto voice modes. Isolated environment. Apache-2.0.
 - **VoxCPM2** by [OpenBMB](https://huggingface.co/openbmb/VoxCPM2) — 2B tokenizer-free TTS, 48 kHz, 30 languages, with voice design and controllable + transcript-guided cloning. Isolated environment. Apache-2.0.
@@ -21,7 +22,7 @@ Three project modes — a multi-segment **podcast editor**, a single-textarea **
 
 ## Features
 
-- **Six TTS engines, switchable from the UI** — VibeVoice, Kokoro, Chatterbox, OmniVoice, VoxCPM2, Qwen3-TTS CustomVoice; only one is loaded at a time. The isolated-environment engines (Chatterbox, OmniVoice, VoxCPM, Qwen) **install / download weights / delete weights / uninstall** straight from the engine menu, with a live progress log.
+- **Seven TTS engines, switchable from the UI** — VibeVoice, Kokoro, Kitten TTS Mini, Chatterbox, OmniVoice, VoxCPM2, Qwen3-TTS CustomVoice; only one is loaded at a time. The isolated-environment engines (Chatterbox, OmniVoice, VoxCPM, Qwen) **install / download weights / delete weights / uninstall** straight from the engine menu, with a live progress log.
 - **Speech-to-text (Transcribe mode)** — **Whisper large-v3-turbo**, in-process, 99 languages. Drop an audio file for an editable transcript, then Copy, "Send to Text-to-Voice", or export `.srt` / `.vtt` subtitles. Also generates subtitles for audio you synthesized, and auto-fills a voice's reference transcript. Whisper's weights (~1.6 GB) download and delete from the engine menu like any other model.
 - **Three project modes** — a multi-segment **Podcast** editor, a single-textarea **Text-to-Voice** mode (with char / word / duration counts), and a **Transcribe** mode. Each mode keeps its own buffer.
 - **Voice modes** (OmniVoice & VoxCPM) — per-speaker **Clone / Design / Auto**. VoxCPM adds **controllable cloning** (clone + an inline style prompt) and **ultimate cloning** (reference + a per-voice transcript), plus a Fast / Balanced / High **Quality** control.
@@ -44,7 +45,7 @@ Three project modes — a multi-segment **podcast editor**, a single-textarea **
 - **Python 3.10+** (3.11 tested)
 - **Node.js 18+** (Node 20 tested)
 - **PyTorch** with CUDA support (Windows / Linux), or CPU-only (slower), or Apple Silicon (MPS, experimental)
-- **Disk for model weights** (auto-downloaded on first use), per model: Kokoro ~350 MB · Chatterbox ~500 MB · Whisper ~1.6 GB · OmniVoice ~3.3 GB · Qwen3-TTS ~3.5 GB · VoxCPM2 ~5 GB · VibeVoice ~5.4 GB
+- **Disk for model weights** (auto-downloaded on first use), per model: Kitten ~79 MB · Kokoro ~350 MB · Chatterbox ~500 MB · Whisper ~1.6 GB · OmniVoice ~3.3 GB · Qwen3-TTS ~3.5 GB · VoxCPM2 ~5 GB · VibeVoice ~5.4 GB
 - **VRAM**: ~3 GB for VibeVoice fp16, up to ~8 GB for VoxCPM2; Whisper adds ~1.6 GB when transcribing; CPU mode works (slow) on ~2–4 GB RAM
 - **Isolated-environment engines** (Chatterbox, OmniVoice, VoxCPM, Qwen) build their own venv on demand; **VoxCPM requires Python 3.10–3.12**
 - **OS**: Windows 10/11, Linux, macOS

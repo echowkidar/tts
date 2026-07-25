@@ -22,7 +22,7 @@ from backend.scripts.download_models import MODEL_CATALOG
 #: not a TTS engine, so it lives in AsrService rather than EngineManager — but
 #: its 1.6 GB is reclaimable like any other.
 DELETABLE: frozenset[str] = frozenset(
-    {"vibevoice", "kokoro", "omnivoice", "chatterbox", "voxcpm", "qwen", "whisper"}
+    {"vibevoice", "kokoro", "kitten", "omnivoice", "chatterbox", "voxcpm", "qwen", "whisper"}
 )
 
 _MAX_LOG_LINES = 500

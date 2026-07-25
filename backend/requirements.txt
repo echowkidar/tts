@@ -50,6 +50,13 @@ nvidia-ml-py>=12.535
 kokoro>=0.9.4
 misaki[en]>=0.9.4
 
+# Kitten TTS Mini — ultra-light ONNX TTS (runs on CPU, no torch/transformers).
+# Shares Kokoro's misaki/espeak deps; the only new dep is onnxruntime. The
+# package is a GitHub release wheel (not on PyPI). Models:
+# https://huggingface.co/KittenML/kitten-tts-mini-0.8
+onnxruntime>=1.20
+kittentts @ https://github.com/KittenML/KittenTTS/releases/download/0.8/kittentts-0.8.0-py3-none-any.whl
+
 # Chatterbox Multilingual V3 is NOT installed here. It hard-pins
 # transformers==5.2.0, which conflicts with vibevoice's transformers==4.51.3.
 # It installs into a separate environment (backend/venv-chatterbox) and runs

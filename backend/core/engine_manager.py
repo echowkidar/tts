@@ -18,6 +18,7 @@ from typing import Any
 from .engines import Engine
 from .engines.chatterbox_engine import ChatterboxEngine
 from .engines.kokoro_engine import KokoroEngine
+from .engines.kitten_engine import KittenEngine
 from .engines.omnivoice_engine import OmniVoiceEngine
 from .engines.vibevoice_engine import VibeVoiceEngine
 from .engines.voxcpm_engine import VoxCPMEngine
@@ -87,6 +88,7 @@ class EngineManager:
                 default_cfg_scale=default_cfg_scale,
             ),
             "kokoro": KokoroEngine(default_lang_code=kokoro_lang_code),
+            "kitten": KittenEngine(),
             "chatterbox": ChatterboxEngine(
                 model_id=chatterbox_model_id,
                 default_language_id=chatterbox_default_language_id,
