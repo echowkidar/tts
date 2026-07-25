@@ -118,10 +118,10 @@ def test_voices_list_empty(tmp_path):
     r = client.get("/api/voices")
     assert r.status_code == 200
     body = r.json()
-    # Filesystem empty; engine built-in voices (Kokoro + Qwen) should still
-    # be present. Only built-in-voice engines contribute here.
+    # Filesystem empty; engine built-in voices (Kokoro + Kitten + Qwen) should
+    # still be present. Only built-in-voice engines contribute here.
     voices = body["voices"]
-    assert all(v["engine"] in ("kokoro", "qwen") for v in voices)
+    assert all(v["engine"] in ("kokoro", "kitten", "qwen") for v in voices)
     assert len(voices) >= 30
     # No uploads or built-in files were placed.
     assert not any(v["source"] == "upload" for v in voices)
@@ -300,7 +300,7 @@ def test_engines_voice_tag(tmp_path):
     r = client.get("/api/voices")
     assert r.status_code == 200
     for v in r.json()["voices"]:
-        assert v["engine"] in ("kokoro", "vibevoice", "qwen")
+        assert v["engine"] in ("kokoro", "kitten", "vibevoice", "qwen")
 
 
 def test_cache_total_size(tmp_path):
