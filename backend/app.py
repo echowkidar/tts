@@ -65,6 +65,11 @@ def _configure_logging(level: str) -> None:
         level=level.upper(),
         format="%(asctime)s %(levelname)-7s [%(name)s] %(message)s",
     )
+    # phonemizer's espeak backend warns "words count mismatch …" on nearly every
+    # Kokoro/Kitten synthesis — it's cosmetic (word-count alignment only matters
+    # for per-word timestamps, which we don't use) and floods the log. Mute its
+    # WARNINGs; real errors still surface.
+    logging.getLogger("phonemizer").setLevel(logging.ERROR)
 
 
 def _mount_frontend(app: FastAPI, dist_dir: Path) -> None:
