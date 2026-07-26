@@ -15,6 +15,7 @@ import { MiddleToolbar } from "@/components/MiddleToolbar";
 import { ModeChooser } from "@/components/ModeChooser";
 import { TranscribeControls } from "@/components/TranscribeControls";
 import { TranscribeEditor } from "@/components/TranscribeEditor";
+import { DubEditor } from "@/components/DubEditor";
 import { TtsEditor } from "@/components/TtsEditor";
 import { InlinePlayer } from "@/components/InlinePlayer";
 import { BrandFooter } from "@/components/BrandFooter";
@@ -907,8 +908,12 @@ export default function App() {
           onRemoveVoice={removeVoice}
           onUpdateVoiceMeta={handleUpdateVoiceMeta}
           supportsVoiceCloning={supportsVoiceCloning}
-          selectedVoiceId={pm.mode === "tts" ? pm.tts.voiceId : undefined}
-          onSelectVoice={pm.mode === "tts" ? pm.setTtsVoice : undefined}
+          selectedVoiceId={
+            pm.mode === "tts" ? pm.tts.voiceId : pm.mode === "dub" ? pm.dub.voiceId : undefined
+          }
+          onSelectVoice={
+            pm.mode === "tts" ? pm.setTtsVoice : pm.mode === "dub" ? pm.setDubVoice : undefined
+          }
         />
       )}
 
@@ -948,6 +953,16 @@ export default function App() {
               pm.setTtsText(text);
               pm.setMode("tts");
             }}
+          />
+        ) : pm.mode === "dub" ? (
+          <DubEditor
+            isDark={isDark}
+            buffer={pm.dub}
+            onChange={pm.setDub}
+            asr={asrStatus}
+            activeVoice={displayedVoices.find((v) => v.id === pm.dub.voiceId) ?? null}
+            activeEngine={activeEngine}
+            onDownloadWeights={() => setDownloadEngine("whisper")}
           />
         ) : pm.mode === "tts" ? (
           <div className="flex-1 overflow-y-auto px-6 py-4">

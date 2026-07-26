@@ -116,6 +116,41 @@ export async function transcribeVoice(
   );
 }
 
+// ---- dub (voice-to-voice re-voicing) ----
+
+export interface DubArgs {
+  segments: { start: number; end: number; text: string }[];
+  voice: string;
+  engine?: string;
+}
+
+/** Re-voice transcript segments; returns the dubbed WAV as an ArrayBuffer. */
+export async function dub(
+  args: DubArgs,
+): Promise<{ audio: ArrayBuffer; sampleRate: number; cacheHash: string | null }> {
+  const res = await fetch(`${API_BASE}/dub`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      const b = (await res.json()) as { detail?: string | { msg?: string }[] };
+      if (typeof b.detail === "string") detail = b.detail;
+      else if (Array.isArray(b.detail) && b.detail[0]?.msg) detail = b.detail[0].msg!;
+    } catch {
+      /* keep statusText */
+    }
+    throw new ApiError(detail, res.status);
+  }
+  return {
+    audio: await res.arrayBuffer(),
+    sampleRate: Number(res.headers.get("X-Sample-Rate") ?? "24000"),
+    cacheHash: res.headers.get("X-Cache-Hash"),
+  };
+}
+
 export interface CacheEntryInfo {
   hash: string;
   sample_rate: number;
