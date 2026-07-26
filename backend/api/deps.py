@@ -52,6 +52,10 @@ def get_asr_service(request: Request):
     return request.app.state.asr_service
 
 
+def get_dub_service(request: Request):
+    return request.app.state.dub_service
+
+
 def get_join_cache(request: Request) -> JoinCache:
     return request.app.state.join_cache  # type: ignore[no-any-return]
 

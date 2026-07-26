@@ -197,6 +197,33 @@ class VoiceTranscribeResponse(BaseModel):
     language: str
 
 
+# ---- dub ----
+
+class DubSegmentModel(BaseModel):
+    start: float = Field(ge=0)
+    end: float = Field(ge=0)
+    text: str = ""   # empty text = dropped from the dub
+
+
+class DubRequestBody(BaseModel):
+    segments: list[DubSegmentModel] = Field(min_length=1, max_length=2000)
+    voice: str = Field(min_length=1, max_length=256)
+    engine: str | None = None
+    # per-engine synth knobs, forwarded verbatim (engines ignore what they don't use)
+    cfg_scale: float | None = None
+    speed: float | None = Field(default=None, ge=0.25, le=4.0)
+    cfg_weight: float | None = Field(default=None, ge=0.0, le=2.0)
+    exaggeration: float | None = Field(default=None, ge=0.0, le=2.0)
+    language_id: str | None = None
+    inference_steps: int | None = Field(default=None, ge=1, le=100)
+    temperature: float | None = Field(default=None, ge=0.1, le=2.0)
+    top_p: float | None = Field(default=None, ge=0.0, le=1.0)
+    top_k: int | None = Field(default=None, ge=0, le=200)
+    repetition_penalty: float | None = Field(default=None, ge=1.0, le=2.0)
+    seed: int | None = Field(default=None, ge=0)
+    force_regenerate: bool = False
+
+
 class AsrStatusResponse(BaseModel):
     name: str = "whisper"
     model_id: str
