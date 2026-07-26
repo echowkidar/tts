@@ -6,7 +6,31 @@ No new model — orchestrates SynthService over the (user-edited) ASR segments.
 
 from __future__ import annotations
 
+import hashlib
+import json
+import logging
+import time
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
+
+from ..core.exceptions import TextInvalid
+from .audio_pcm import pcm16_from_wav, pcm16_to_wav
+from .synthesize import Speaker, SynthRequest
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .join_cache import JoinCache
+    from .synthesize import SynthService
+
+log = logging.getLogger(__name__)
+
+# knobs forwarded to SynthRequest verbatim (per-engine; ignored by engines that
+# don't use them). Mirrors SynthRequestBody's optional fields.
+_KNOBS = (
+    "cfg_scale", "speed", "cfg_weight", "exaggeration", "language_id",
+    "inference_steps", "temperature", "top_p", "top_k", "repetition_penalty", "seed",
+)
 
 
 def _silence_pcm(seconds: float, sample_rate: int) -> bytes:
@@ -34,3 +58,84 @@ def _reconstruct_timeline(
         out.append(pcm)
         prev_end = end
     return b"".join(out)
+
+
+@dataclass
+class DubSegment:
+    start: float
+    end: float
+    text: str
+
+
+@dataclass
+class DubResult:
+    wav_bytes: bytes
+    sample_rate: int
+    duration_sec: float
+    inference_ms: int
+    cache_hash: str
+    cache_hit: bool = False
+
+
+class DubService:
+    def __init__(self, synth: "SynthService", cache: "JoinCache | None" = None) -> None:
+        self._synth = synth
+        self._cache = cache
+
+    def dub(self, segments: list[DubSegment], voice: str,
+            engine: str | None = None, **knobs: Any) -> DubResult:
+        if not voice or not voice.strip():
+            raise TextInvalid("a target voice is required for dubbing")
+        active = [s for s in segments if (s.text or "").strip()]
+        if not active:
+            raise TextInvalid("no non-empty segments to dub")
+
+        cache_hash = self._hash(active, voice, engine, knobs)
+        if self._cache is not None and self._cache.enabled and not knobs.get("force_regenerate"):
+            hit = self._cache.get(cache_hash)
+            if hit is not None:
+                return DubResult(
+                    wav_bytes=hit.wav_path.read_bytes(), sample_rate=hit.sample_rate,
+                    duration_sec=hit.duration_sec, inference_ms=hit.inference_ms,
+                    cache_hash=cache_hash, cache_hit=True,
+                )
+
+        forwarded = {k: knobs[k] for k in _KNOBS if k in knobs and knobs[k] is not None}
+        pieces: list[tuple[float, float, bytes]] = []
+        sample_rate = 0
+        t0 = time.perf_counter()
+        for seg in active:
+            res = self._synth.synthesize(SynthRequest(
+                text=seg.text,
+                speakers=[Speaker(name="dub", voice_id=voice)],
+                engine=engine,
+                **forwarded,
+            ))
+            pcm, sr, _ = pcm16_from_wav(res.wav_bytes)
+            sample_rate = sr  # all segments share one engine -> one sample rate
+            pieces.append((seg.start, seg.end, pcm))
+
+        joined_pcm = _reconstruct_timeline(pieces, sample_rate)
+        wav = pcm16_to_wav(joined_pcm, sample_rate)
+        duration = (len(joined_pcm) // 2) / float(sample_rate)
+        inference_ms = int((time.perf_counter() - t0) * 1000)
+
+        if self._cache is not None and self._cache.enabled:
+            try:
+                self._cache.put(join_hash=cache_hash, wav_bytes=wav, sample_rate=sample_rate,
+                                duration_sec=duration, inference_ms=inference_ms)
+            except Exception as exc:  # noqa: BLE001 — caching is best-effort
+                log.debug("dub cache put failed: %s", exc)
+
+        return DubResult(wav_bytes=wav, sample_rate=sample_rate, duration_sec=duration,
+                         inference_ms=inference_ms, cache_hash=cache_hash, cache_hit=False)
+
+    @staticmethod
+    def _hash(segments: list[DubSegment], voice: str, engine: str | None,
+              knobs: dict[str, Any]) -> str:
+        canonical = json.dumps({
+            "segs": [{"t": s.text, "s": round(s.start, 3), "e": round(s.end, 3)} for s in segments],
+            "voice": voice, "engine": engine,
+            "knobs": {k: knobs.get(k) for k in _KNOBS},
+        }, sort_keys=True, ensure_ascii=False)
+        return "dub-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:24]
