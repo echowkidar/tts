@@ -76,24 +76,27 @@ export function DubEditor({
     setBusy("dub");
     setError(null);
     setElapsed(0);
+    let res: { audio: ArrayBuffer; sampleRate: number };
     try {
-      const res = await dub({
+      res = await dub({
         segments: buffer.segments.map((s) => ({ start: s.start, end: s.end, text: s.text })),
         voice: activeVoice.id,
         engine: activeEngine ?? undefined,
       });
       setAudio({ data: res.audio, sampleRate: res.sampleRate });
-      // Auto-play the fresh dub.
-      setPlaying(true);
-      try {
-        await playerRef.current.playPcm16(wavToPcm16(res.audio), res.sampleRate);
-      } finally {
-        setPlaying(false);
-      }
     } catch (e) {
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Dubbing failed");
+      return;
     } finally {
       setBusy(null);
+    }
+    // Auto-play the fresh dub OUTSIDE the busy window, so the Generate button
+    // re-enables immediately and playback is reflected only by the Play/Stop toggle.
+    setPlaying(true);
+    try {
+      await playerRef.current.playPcm16(wavToPcm16(res.audio), res.sampleRate);
+    } finally {
+      setPlaying(false);
     }
   }, [activeVoice, activeEngine, buffer.segments]);
 
