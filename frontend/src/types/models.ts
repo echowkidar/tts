@@ -7,12 +7,21 @@ export interface EngineLanguage {
   label: string;
 }
 
-export type ProjectMode = "tts" | "podcast" | "transcribe";
+export type ProjectMode = "tts" | "podcast" | "transcribe" | "dub";
 
 export interface AsrSegment {
   start: number;
   end: number;
   text: string;
+}
+
+export interface DubBuffer {
+  fileName: string;
+  /** Reuses the ASR segment shape {start,end,text}; timing drives the dub. */
+  segments: AsrSegment[];
+  detectedLanguage: string;
+  /** Target voice for the whole clip (Voice.id). null until the user picks one. */
+  voiceId: string | null;
 }
 
 export interface TranscribeBuffer {

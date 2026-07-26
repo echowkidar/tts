@@ -14,7 +14,7 @@ A local web UI for **multiple open-source TTS models** — switch engines from t
 
 Plus **speech-to-text**: **Whisper large-v3-turbo** by [OpenAI](https://huggingface.co/openai/whisper-large-v3-turbo) runs in-process for the Transcribe mode — 99 languages, 16 kHz mono, exports `.srt` / `.vtt`. MIT.
 
-Three project modes — a multi-segment **podcast editor**, a single-textarea **text-to-voice** mode, and a **transcribe** mode (drop audio → editable transcript → subtitles) — plus voice uploads, per-voice cloning, GPU/CPU/MPS backend, fully offline after first run.
+Four project modes — a multi-segment **podcast editor**, a single-textarea **text-to-voice** mode, a **transcribe** mode (drop audio → editable transcript → subtitles), and a **dub** mode (drop audio → re-voice it in any voice) — plus voice uploads, per-voice cloning, GPU/CPU/MPS backend, fully offline after first run.
 
 <img width="2561" height="1440" alt="main-dark" src="https://github.com/user-attachments/assets/08fbac39-daa6-45a9-a4bd-9ca8a8711b07" />
 
@@ -24,7 +24,8 @@ Three project modes — a multi-segment **podcast editor**, a single-textarea **
 
 - **Seven TTS engines, switchable from the UI** — VibeVoice, Kokoro, Kitten TTS Mini, Chatterbox, OmniVoice, VoxCPM2, Qwen3-TTS CustomVoice; only one is loaded at a time. The isolated-environment engines (Chatterbox, OmniVoice, VoxCPM, Qwen) **install / download weights / delete weights / uninstall** straight from the engine menu, with a live progress log.
 - **Speech-to-text (Transcribe mode)** — **Whisper large-v3-turbo**, in-process, 99 languages. Drop an audio file for an editable transcript, then Copy, "Send to Text-to-Voice", or export `.srt` / `.vtt` subtitles. Also generates subtitles for audio you synthesized, and auto-fills a voice's reference transcript. Whisper's weights (~1.6 GB) download and delete from the engine menu like any other model.
-- **Three project modes** — a multi-segment **Podcast** editor, a single-textarea **Text-to-Voice** mode (with char / word / duration counts), and a **Transcribe** mode. Each mode keeps its own buffer.
+- **Voice-to-voice dubbing (Dub mode)** — drop an audio clip, transcribe it with Whisper, tidy the per-segment text, pick any voice, and **re-voice the whole clip** in that voice. Same-language, audio-in → audio-out, with the original pauses preserved (natural timing, no time-stretch). Works on every engine — no extra model.
+- **Four project modes** — a multi-segment **Podcast** editor, a single-textarea **Text-to-Voice** mode (with char / word / duration counts), a **Transcribe** mode, and a **Dub** mode. Each mode keeps its own buffer.
 - **Voice modes** (OmniVoice & VoxCPM) — per-speaker **Clone / Design / Auto**. VoxCPM adds **controllable cloning** (clone + an inline style prompt) and **ultimate cloning** (reference + a per-voice transcript), plus a Fast / Balanced / High **Quality** control.
 - **Qwen style control** — Qwen3-TTS pairs 9 premium built-in voices with an always-on free-text **style prompt** and an Advanced panel (temperature / top-p / top-k / repetition penalty / seed).
 - **Multi-segment podcast editor** — author scripts with multiple speakers, generate each segment, play through, or export one joined WAV.

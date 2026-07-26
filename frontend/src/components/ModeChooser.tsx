@@ -1,4 +1,4 @@
-import { Mic2, FileText, FileAudio } from "lucide-react";
+import { Mic2, FileText, FileAudio, AudioLines } from "lucide-react";
 import type { ProjectMode } from "@/types/models";
 import { focusRing } from "@/lib/theme";
 
@@ -15,7 +15,7 @@ export function ModeChooser({ isDark, onPick }: Props) {
   const sub = isDark ? "text-zinc-400" : "text-gray-600";
   return (
     <div className="flex-1 flex items-center justify-center p-8">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl w-full">
         <button type="button" onClick={() => onPick("tts")}
           className={`text-left p-6 rounded-xl border transition-colors ${card} ${focusRing}`}>
           <FileText className="w-8 h-8 text-orange-400 mb-3" />
@@ -33,6 +33,12 @@ export function ModeChooser({ isDark, onPick }: Props) {
           <FileAudio className="w-8 h-8 text-orange-400 mb-3" />
           <div className={`font-semibold ${title}`}>Transcribe</div>
           <p className={`text-sm mt-1 ${sub}`}>Turn an audio file into text, with subtitles.</p>
+        </button>
+        <button type="button" onClick={() => onPick("dub")}
+          className={`text-left p-6 rounded-xl border transition-colors ${card} ${focusRing}`}>
+          <AudioLines className="w-8 h-8 text-orange-400 mb-3" />
+          <div className={`font-semibold ${title}`}>Dub</div>
+          <p className={`text-sm mt-1 ${sub}`}>Re-voice an audio clip in a voice you choose.</p>
         </button>
       </div>
     </div>

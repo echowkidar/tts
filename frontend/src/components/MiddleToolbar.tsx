@@ -100,8 +100,9 @@ export function MiddleToolbar({
           busy={busy}
           onExportJson={onExportJson}
           onImportJson={onImportJson}
-          // Transcribe mode has no generated audio of its own to subtitle.
-          onExportSubtitles={mode === "transcribe" ? undefined : onExportSubtitles}
+          // Transcribe/Dub modes have no project-cached audio to subtitle here
+          // (Dub renders + downloads its WAV inside DubEditor).
+          onExportSubtitles={mode === "transcribe" || mode === "dub" ? undefined : onExportSubtitles}
           subtitlesDisabled={subtitlesDisabled}
         />
 

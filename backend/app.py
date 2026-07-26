@@ -29,6 +29,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .api.asr import router as asr_router
+from .api.dub import router as dub_router
 from .api.cache import router as cache_router
 from .api.download import router as download_router
 from .api.engines import router as engines_router
@@ -242,9 +243,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.voice_registry = voice_registry
     app.state.synth_cache = synth_cache
     app.state.join_cache = join_cache
+    # Dubbing re-voices transcript segments via the synth service; its results
+    # cache in their own dub/ dir (DubCache round-trips reliably in-process).
+    from .services.dub import DubService
+    from .services.dub_cache import DubCache
+    dub_service = DubService(
+        synth=synth_service,
+        cache=DubCache(settings.cache_dir / "dub", enabled=settings.cache_enabled),
+    )
+
     app.state.synth_service = synth_service
     app.state.gpu_gate = gpu_gate
     app.state.asr_service = asr_service
+    app.state.dub_service = dub_service
     app.state.engine_installers = {
         "chatterbox": ChatterboxInstaller(),
         "omnivoice": EngineEnvInstaller("install-omnivoice"),
@@ -275,6 +286,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(update_router)
     app.include_router(system_router)
     app.include_router(asr_router)
+    app.include_router(dub_router)
 
     # ---- static frontend (prod mode only; no-op if frontend/dist is absent)
     _frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"

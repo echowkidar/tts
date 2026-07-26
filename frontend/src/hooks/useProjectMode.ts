@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import type { ProjectMode, TranscribeBuffer, TtsBuffer } from "@/types/models";
+import type { DubBuffer, ProjectMode, TranscribeBuffer, TtsBuffer } from "@/types/models";
 
 const MODE_KEY = "vs.mode";
 const TTS_KEY = "vs.tts";
 const TRANSCRIBE_KEY = "vs.transcribe";
+const DUB_KEY = "vs.dub";
 const EMPTY_TTS: TtsBuffer = { text: "", voiceId: null, language: null };
 const EMPTY_TRANSCRIBE: TranscribeBuffer = {
   fileName: "",
@@ -13,12 +14,28 @@ const EMPTY_TRANSCRIBE: TranscribeBuffer = {
   segments: [],
   detectedLanguage: "",
 };
+const EMPTY_DUB: DubBuffer = {
+  fileName: "",
+  segments: [],
+  detectedLanguage: "",
+  voiceId: null,
+};
 
 function readMode(): ProjectMode | null {
   const v = localStorage.getItem(MODE_KEY);
   // A stored "music" (from the removed music mode) falls through to null, so
   // those users land on the ModeChooser and re-pick.
-  return v === "tts" || v === "podcast" || v === "transcribe" ? v : null;
+  return v === "tts" || v === "podcast" || v === "transcribe" || v === "dub" ? v : null;
+}
+function readDub(): DubBuffer {
+  try {
+    const raw = localStorage.getItem(DUB_KEY);
+    if (!raw) return EMPTY_DUB;
+    const p = JSON.parse(raw) as Partial<DubBuffer>;
+    return { ...EMPTY_DUB, ...p };
+  } catch {
+    return EMPTY_DUB;
+  }
 }
 function readTranscribe(): TranscribeBuffer {
   try {
@@ -58,12 +75,16 @@ export interface UseProjectModeApi {
   setTtsVoiceDesign: (voiceDesign: string) => void;
   transcribe: TranscribeBuffer;
   setTranscribe: (partial: Partial<TranscribeBuffer>) => void;
+  dub: DubBuffer;
+  setDub: (partial: Partial<DubBuffer>) => void;
+  setDubVoice: (voiceId: string | null) => void;
 }
 
 export function useProjectMode(): UseProjectModeApi {
   const [mode, setModeState] = useState<ProjectMode | null>(readMode);
   const [tts, setTts] = useState<TtsBuffer>(readTts);
   const [transcribe, setTranscribeState] = useState<TranscribeBuffer>(readTranscribe);
+  const [dub, setDubState] = useState<DubBuffer>(readDub);
 
   useEffect(() => {
     if (mode) localStorage.setItem(MODE_KEY, mode);
@@ -74,6 +95,9 @@ export function useProjectMode(): UseProjectModeApi {
   useEffect(() => {
     localStorage.setItem(TRANSCRIBE_KEY, JSON.stringify(transcribe));
   }, [transcribe]);
+  useEffect(() => {
+    localStorage.setItem(DUB_KEY, JSON.stringify(dub));
+  }, [dub]);
 
   const setMode = useCallback((m: ProjectMode) => setModeState(m), []);
   const setTtsText = useCallback((text: string) => setTts((t) => ({ ...t, text })), []);
@@ -91,6 +115,11 @@ export function useProjectMode(): UseProjectModeApi {
     (partial: Partial<TranscribeBuffer>) => setTranscribeState((t) => ({ ...t, ...partial })),
     [],
   );
+  const setDub = useCallback(
+    (partial: Partial<DubBuffer>) => setDubState((d) => ({ ...d, ...partial })),
+    [],
+  );
+  const setDubVoice = useCallback((voiceId: string | null) => setDubState((d) => ({ ...d, voiceId })), []);
 
   return {
     mode,
@@ -103,5 +132,8 @@ export function useProjectMode(): UseProjectModeApi {
     setTtsVoiceDesign,
     transcribe,
     setTranscribe,
+    dub,
+    setDub,
+    setDubVoice,
   };
 }

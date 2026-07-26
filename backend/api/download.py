@@ -97,55 +97,11 @@ def _join_canonical(segments: list["DownloadSegment"], silence_gap_ms: int, defa
     )
 
 
-def _pcm16_from_wav(wav_bytes: bytes) -> tuple[bytes, int, int]:
-    """Strip the 44-byte WAV header and return (pcm16_bytes, sample_rate, sample_count)."""
-    if wav_bytes[:4] != b"RIFF" or wav_bytes[8:12] != b"WAVE":
-        raise ValueError("not a RIFF/WAVE file")
-    # Walk chunks to find the audio data — handles non-standard headers.
-    pos = 12
-    sample_rate = 24000
-    pcm = b""
-    while pos + 8 <= len(wav_bytes):
-        chunk_id = wav_bytes[pos:pos + 4]
-        chunk_size = int.from_bytes(wav_bytes[pos + 4:pos + 8], "little")
-        if chunk_id == b"fmt ":
-            # fmt chunk layout (after 8-byte chunk header):
-            #   +0/+2: audio_format (2)        — pos+8
-            #   +2/+4: num_channels (2)        — pos+10
-            #   +4/+8: sample_rate (4)         — pos+12
-            #   +8/+12: byte_rate (4)
-            #   +12/+14: block_align (2)
-            #   +14/+16: bits_per_sample (2)
-            if pos + 16 <= len(wav_bytes):
-                sample_rate = int.from_bytes(wav_bytes[pos + 12:pos + 16], "little")
-        elif chunk_id == b"data":
-            pcm = wav_bytes[pos + 8:pos + 8 + chunk_size]
-            break
-        pos += 8 + chunk_size
-        # Chunks are word-aligned
-        if chunk_size % 2 == 1:
-            pos += 1
-    if not pcm:
-        raise ValueError("WAV has no data chunk")
-    return pcm, sample_rate, len(pcm) // 2
-
-
-def _pcm16_to_wav(pcm: bytes, sample_rate: int, channels: int = 1, bits: int = 16) -> bytes:
-    data_size = len(pcm)
-    byte_rate = sample_rate * channels * bits // 8
-    block_align = channels * bits // 8
-    header = struct_pack(
-        b"RIFF", 36 + data_size, b"WAVE", b"fmt ", 16, 1, channels,
-        sample_rate, byte_rate, block_align, bits, b"data", data_size,
-    )
-    return header + pcm
-
-
-def struct_pack(*args):  # tiny local shim so this file is self-contained
-    import struct
-    return struct.pack(
-        "<4sI4s4sIHHIIHH4sI", *args
-    )
+# PCM<->WAV helpers live in services/audio_pcm.py so services (dubbing) can reuse
+# them without importing from an api module. Aliased to the old private names so
+# the rest of this file is unchanged.
+from ..services.audio_pcm import pcm16_from_wav as _pcm16_from_wav  # noqa: E402
+from ..services.audio_pcm import pcm16_to_wav as _pcm16_to_wav  # noqa: E402
 
 
 def _concat_pcm(segments: list[bytes], gap_ms: int, sample_rate: int) -> bytes:
