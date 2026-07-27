@@ -161,6 +161,12 @@ def _ensure_uv() -> Path | None:
     except OSError as exc:
         print(f"  WARNING: could not create uv cache dir {cache}: {exc} "
               "(disk dedup may not apply).")
+    # KittenTTS (in backend/requirements.txt) ships a wheel whose filename says
+    # 0.8.0 but whose internal METADATA says 0.1.0. uv rejects that mismatch by
+    # default ("malformed wheel"); it's the vendor's packaging bug, not a
+    # corrupted download, so skip the filename check. pip doesn't enforce it.
+    # setdefault so a user-provided value still wins.
+    os.environ.setdefault("UV_SKIP_WHEEL_FILENAME_CHECK", "1")
     _UV_RESOLVED["uv"] = uv
     return uv
 
