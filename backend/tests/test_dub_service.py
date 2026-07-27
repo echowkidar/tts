@@ -79,6 +79,31 @@ def test_design_mode_allows_empty_voice():
     assert synth.calls[0].speakers[0].instruct == "young adult"
 
 
+def test_design_mode_synthesizes_full_text_in_one_call():
+    # No reference voice -> one call for the whole transcript (consistent voice),
+    # not one per segment (which would drift).
+    synth = _StubSynth()
+    svc = DubService(synth=synth, cache=None)
+    segs = [DubSegment(0.0, 1.0, "hello"), DubSegment(2.0, 3.0, "world"), DubSegment(4.0, 5.0, "bye")]
+    svc.dub(segs, voice="", voice_mode="design", instruct="x")
+    assert len(synth.calls) == 1
+    assert synth.calls[0].text == "hello world bye"
+
+
+def test_auto_mode_synthesizes_in_one_call():
+    synth = _StubSynth()
+    svc = DubService(synth=synth, cache=None)
+    svc.dub([DubSegment(0.0, 1.0, "a"), DubSegment(2.0, 3.0, "b")], voice="", voice_mode="auto")
+    assert len(synth.calls) == 1
+
+
+def test_clone_mode_still_synthesizes_per_segment():
+    synth = _StubSynth()
+    svc = DubService(synth=synth, cache=None)
+    svc.dub([DubSegment(0.0, 1.0, "a"), DubSegment(2.0, 3.0, "b")], voice="v", voice_mode="clone")
+    assert len(synth.calls) == 2
+
+
 def test_voice_mode_and_instruct_change_hash():
     svc = DubService(synth=_StubSynth(), cache=None)
     base = svc.dub([DubSegment(0.0, 1.0, "hi")], voice="v").cache_hash

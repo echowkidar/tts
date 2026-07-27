@@ -109,9 +109,10 @@ class DubService:
         pieces: list[tuple[float, float, bytes]] = []
         sample_rate = 0
         t0 = time.perf_counter()
-        for seg in active:
+
+        def _synth(text: str) -> tuple[bytes, int]:
             res = self._synth.synthesize(SynthRequest(
-                text=seg.text,
+                text=text,
                 speakers=[Speaker(
                     name="dub", voice_id=voice,
                     voice_mode=voice_mode, instruct=instruct,
@@ -119,9 +120,26 @@ class DubService:
                 engine=engine,
                 **forwarded,
             ))
-            pcm, sr, _ = pcm16_from_wav(res.wav_bytes)
-            sample_rate = sr  # all segments share one engine -> one sample rate
-            pieces.append((seg.start, seg.end, pcm))
+            return pcm16_from_wav(res.wav_bytes)[:2]
+
+        if (voice_mode or "").strip().lower() in ("design", "auto"):
+            # No reference voice anchors consistency, so a per-segment synth would
+            # invent a DIFFERENT voice for every sentence (and drift by the end).
+            # Synthesize the whole transcript in ONE call for a single, consistent
+            # voice. We keep the leading offset but not the inter-segment pauses
+            # (the result is one continuous take). Collapse whitespace/newlines so
+            # SynthService treats it as a single utterance, not multiple lines.
+            joined_text = " ".join(" ".join(s.text.split()) for s in active)
+            pcm, sample_rate = _synth(joined_text)
+            pieces.append((active[0].start, active[0].start, pcm))
+        else:
+            # Clone (or an engine without voice modes): the fixed reference voice
+            # keeps every take consistent, so synthesize per segment and preserve
+            # the original inter-segment pauses.
+            for seg in active:
+                pcm, sr = _synth(seg.text)
+                sample_rate = sr  # all segments share one engine -> one sample rate
+                pieces.append((seg.start, seg.end, pcm))
 
         joined_pcm = _reconstruct_timeline(pieces, sample_rate)
         wav = pcm16_to_wav(joined_pcm, sample_rate)
