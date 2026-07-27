@@ -1,11 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AudioLines, Download, FileAudio, Loader2, Play, Square, Upload } from "lucide-react";
+import { AudioLines, Download, FileAudio, Loader2, Upload } from "lucide-react";
 import { ApiError, dub, transcribe } from "@/lib/api";
-import { AudioPlayer, wavToPcm16 } from "@/lib/audio";
 import { isRtlText, textDirection } from "@/lib/textStats";
 import { focusRing } from "@/lib/theme";
 import { DESIGN_CHIPS, appendDesignChip, effectiveMode, type VoiceMode } from "@/lib/voiceModes";
 import type { AsrSegment, AsrStatus, DubBuffer, Voice } from "@/types/models";
+
+/** Create an object URL for a Blob/File and revoke it when it changes or unmounts. */
+function useObjectUrl(blob: Blob | null): string | null {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!blob) {
+      setUrl(null);
+      return;
+    }
+    const u = URL.createObjectURL(blob);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [blob]);
+  return url;
+}
 
 interface Props {
   isDark: boolean;
@@ -42,12 +56,21 @@ export function DubEditor({
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [audio, setAudio] = useState<{ data: ArrayBuffer; sampleRate: number } | null>(null);
-  const [playing, setPlaying] = useState(false);
+  const [dubBlob, setDubBlob] = useState<Blob | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const playerRef = useRef<AudioPlayer>(new AudioPlayer());
+  const dubAudioRef = useRef<HTMLAudioElement>(null);
 
-  useEffect(() => () => playerRef.current.close(), []);
+  // Native <audio> sources for the original clip and the generated dub, so the
+  // user can A/B them with real scrubbers.
+  const originalUrl = useObjectUrl(file);
+  const dubbedUrl = useObjectUrl(dubBlob);
+
+  // Auto-play the dub once it's ready (best-effort; browsers may block autoplay).
+  useEffect(() => {
+    if (dubbedUrl && dubAudioRef.current) {
+      dubAudioRef.current.play().catch(() => {});
+    }
+  }, [dubbedUrl]);
 
   const weightsMissing = asr != null && !asr.downloaded;
   const canTranscribe = !!file && !busy && !!asr && asr.downloaded;
@@ -73,7 +96,7 @@ export function DubEditor({
     setBusy("transcribe");
     setError(null);
     setElapsed(0);
-    setAudio(null); // a new source invalidates any prior dub
+    setDubBlob(null); // a new source invalidates any prior dub
     try {
       const res = await transcribe({ file, timestamps: true });
       onChange({
@@ -98,9 +121,8 @@ export function DubEditor({
     setBusy("dub");
     setError(null);
     setElapsed(0);
-    let res: { audio: ArrayBuffer; sampleRate: number };
     try {
-      res = await dub({
+      const res = await dub({
         segments: buffer.segments.map((s) => ({ start: s.start, end: s.end, text: s.text })),
         voice: activeVoice?.id ?? "",
         engine: activeEngine ?? undefined,
@@ -108,59 +130,36 @@ export function DubEditor({
         ...(supportsVoiceModes ? { voice_mode: mode } : {}),
         ...(instruct ? { instruct } : {}),
       });
-      setAudio({ data: res.audio, sampleRate: res.sampleRate });
+      // A native <audio> reads the WAV header, so no sample rate needed here.
+      setDubBlob(new Blob([res.audio], { type: "audio/wav" }));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Dubbing failed");
-      return;
     } finally {
       setBusy(null);
     }
-    // Auto-play the fresh dub OUTSIDE the busy window, so the Generate button
-    // re-enables immediately and playback is reflected only by the Play/Stop toggle.
-    setPlaying(true);
-    try {
-      await playerRef.current.playPcm16(wavToPcm16(res.audio), res.sampleRate);
-    } finally {
-      setPlaying(false);
-    }
   }, [activeVoice, activeEngine, buffer.segments, mode, design, needsVoice, supportsVoiceModes]);
 
-  const togglePlay = useCallback(async () => {
-    if (!audio) return;
-    if (playing) {
-      playerRef.current.stop();
-      setPlaying(false);
-      return;
-    }
-    setPlaying(true);
-    try {
-      await playerRef.current.playPcm16(wavToPcm16(audio.data), audio.sampleRate);
-    } finally {
-      setPlaying(false);
-    }
-  }, [audio, playing]);
-
   const download = useCallback(() => {
-    if (!audio) return;
-    const url = URL.createObjectURL(new Blob([audio.data], { type: "audio/wav" }));
+    if (!dubBlob) return;
+    const url = URL.createObjectURL(dubBlob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `dub-${(buffer.fileName || "audio").replace(/\.[^.]+$/, "")}.wav`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [audio, buffer.fileName]);
+  }, [dubBlob, buffer.fileName]);
 
   const editSegment = (i: number, text: string) => {
     const next: AsrSegment[] = buffer.segments.map((s, idx) => (idx === i ? { ...s, text } : s));
     onChange({ segments: next });
-    setAudio(null); // editing text invalidates the prior dub
+    setDubBlob(null); // editing text invalidates the prior dub
   };
 
   const pick = (f: File | null | undefined) => {
     if (!f) return;
     setFile(f);
     setError(null);
-    setAudio(null);
+    setDubBlob(null);
   };
 
   const panel = isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-gray-200";
@@ -423,17 +422,27 @@ export function DubEditor({
               ))}
             </ul>
 
-            {audio && (
-              <div className="flex items-center gap-2 mt-4">
-                <button type="button" onClick={() => void togglePlay()} className={btn}>
-                  <span className="flex items-center gap-1.5">
-                    {playing ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    {playing ? "Stop" : "Play dub"}
-                  </span>
-                </button>
+            {dubbedUrl && (
+              <div className={`mt-4 rounded-lg border p-3 space-y-3 ${isDark ? "border-zinc-800 bg-zinc-950/40" : "border-gray-200 bg-gray-50"}`}>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <div className={`text-xs font-medium ${subtle}`}>Original</div>
+                    {originalUrl ? (
+                      <audio controls src={originalUrl} className="w-full h-9" />
+                    ) : (
+                      <p className={`text-xs italic ${subtle}`}>
+                        Re-choose the file to compare the original.
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-orange-400">Dubbed</div>
+                    <audio ref={dubAudioRef} controls src={dubbedUrl} className="w-full h-9" />
+                  </div>
+                </div>
                 <button type="button" onClick={download} className={btn}>
                   <span className="flex items-center gap-1.5">
-                    <Download className="w-4 h-4" /> Download WAV
+                    <Download className="w-4 h-4" /> Download dubbed WAV
                   </span>
                 </button>
               </div>
