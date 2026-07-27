@@ -124,7 +124,9 @@ export function DubEditor({
     try {
       const res = await dub({
         segments: buffer.segments.map((s) => ({ start: s.start, end: s.end, text: s.text })),
-        voice: activeVoice?.id ?? "",
+        // design/auto carry no reference voice — sending a stale library voice
+        // would only muddy the cache key.
+        voice: needsVoice ? (activeVoice?.id ?? "") : "",
         engine: activeEngine ?? undefined,
         // Only mode-aware engines carry an explicit voice_mode; others stay clone.
         ...(supportsVoiceModes ? { voice_mode: mode } : {}),
