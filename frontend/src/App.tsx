@@ -962,6 +962,9 @@ export default function App() {
             asr={asrStatus}
             activeVoice={displayedVoices.find((v) => v.id === pm.dub.voiceId) ?? null}
             activeEngine={activeEngine}
+            supportsVoiceModes={supportsVoiceModes}
+            supportsStyleClone={activeEngineInfo?.supports_style_clone ?? false}
+            supportsStylePrompt={supportsStylePrompt}
             onDownloadWeights={() => setDownloadEngine("whisper")}
           />
         ) : pm.mode === "tts" ? (

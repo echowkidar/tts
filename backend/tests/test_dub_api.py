@@ -50,9 +50,18 @@ def test_dub_second_call_hits_cache(tmp_path):
     assert r2.headers["X-Cache"] == "hit"
 
 
-def test_dub_empty_voice_422(tmp_path):
+def test_dub_empty_voice_clone_400(tmp_path):
+    # Empty voice with no design/auto mode = clone with no reference -> 400.
     b = _body(); b["voice"] = ""
-    assert _client(tmp_path).post("/api/dub", json=b).status_code == 422
+    assert _client(tmp_path).post("/api/dub", json=b).status_code == 400
+
+
+def test_dub_design_mode_allows_empty_voice(tmp_path):
+    # design/auto carry no reference voice, so an empty voice is fine.
+    b = _body(); b["voice"] = ""; b["voice_mode"] = "design"; b["instruct"] = "young adult"
+    r = _client(tmp_path).post("/api/dub", json=b)
+    assert r.status_code == 200, r.text
+    assert r.headers["content-type"] == "audio/wav"
 
 
 def test_dub_no_segments_422(tmp_path):

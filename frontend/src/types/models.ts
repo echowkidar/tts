@@ -22,6 +22,10 @@ export interface DubBuffer {
   detectedLanguage: string;
   /** Target voice for the whole clip (Voice.id). null until the user picks one. */
   voiceId: string | null;
+  /** OmniVoice/VoxCPM voice mode (clone/design/auto). Derived when unset. */
+  voiceMode?: "clone" | "design" | "auto";
+  /** Design/style prompt (OmniVoice design, VoxCPM style, Qwen style). */
+  voiceDesign?: string;
 }
 
 export interface TranscribeBuffer {

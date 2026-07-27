@@ -122,6 +122,8 @@ export interface DubArgs {
   segments: { start: number; end: number; text: string }[];
   voice: string;
   engine?: string;
+  voice_mode?: "clone" | "design" | "auto";
+  instruct?: string;
 }
 
 /** Re-voice transcript segments; returns the dubbed WAV as an ArrayBuffer. */

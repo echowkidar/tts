@@ -83,14 +83,19 @@ class DubService:
         self._cache = cache
 
     def dub(self, segments: list[DubSegment], voice: str,
-            engine: str | None = None, **knobs: Any) -> DubResult:
-        if not voice or not voice.strip():
+            engine: str | None = None, voice_mode: str | None = None,
+            instruct: str | None = None, **knobs: Any) -> DubResult:
+        # design/auto carry no reference voice; only clone (or an engine with no
+        # voice modes, where SynthService forces clone) needs one. SynthService
+        # does the per-engine enforcement — this is just an early, friendly 400.
+        needs_voice = (voice_mode or "").strip().lower() not in ("design", "auto")
+        if needs_voice and (not voice or not voice.strip()):
             raise TextInvalid("a target voice is required for dubbing")
         active = [s for s in segments if (s.text or "").strip()]
         if not active:
             raise TextInvalid("no non-empty segments to dub")
 
-        cache_hash = self._hash(active, voice, engine, knobs)
+        cache_hash = self._hash(active, voice, engine, voice_mode, instruct, knobs)
         if self._cache is not None and self._cache.enabled and not knobs.get("force_regenerate"):
             hit = self._cache.get(cache_hash)
             if hit is not None:
@@ -107,7 +112,10 @@ class DubService:
         for seg in active:
             res = self._synth.synthesize(SynthRequest(
                 text=seg.text,
-                speakers=[Speaker(name="dub", voice_id=voice)],
+                speakers=[Speaker(
+                    name="dub", voice_id=voice,
+                    voice_mode=voice_mode, instruct=instruct,
+                )],
                 engine=engine,
                 **forwarded,
             ))
@@ -132,10 +140,12 @@ class DubService:
 
     @staticmethod
     def _hash(segments: list[DubSegment], voice: str, engine: str | None,
+              voice_mode: str | None, instruct: str | None,
               knobs: dict[str, Any]) -> str:
         canonical = json.dumps({
             "segs": [{"t": s.text, "s": round(s.start, 3), "e": round(s.end, 3)} for s in segments],
             "voice": voice, "engine": engine,
+            "voice_mode": voice_mode, "instruct": instruct,
             "knobs": {k: knobs.get(k) for k in _KNOBS},
         }, sort_keys=True, ensure_ascii=False)
         return "dub-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:24]
