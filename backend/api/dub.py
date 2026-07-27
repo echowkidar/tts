@@ -23,6 +23,7 @@ def dub(body: DubRequestBody, svc=Depends(get_dub_service)) -> Response:
             segments=[DubSegment(s.start, s.end, s.text) for s in body.segments],
             voice=body.voice,
             engine=body.engine,
+            voice_mode=body.voice_mode, instruct=body.instruct,
             cfg_scale=body.cfg_scale, speed=body.speed, cfg_weight=body.cfg_weight,
             exaggeration=body.exaggeration, language_id=body.language_id,
             inference_steps=body.inference_steps, temperature=body.temperature,

@@ -4,6 +4,7 @@ import { ApiError, dub, transcribe } from "@/lib/api";
 import { AudioPlayer, wavToPcm16 } from "@/lib/audio";
 import { isRtlText, textDirection } from "@/lib/textStats";
 import { focusRing } from "@/lib/theme";
+import { DESIGN_CHIPS, appendDesignChip, effectiveMode, type VoiceMode } from "@/lib/voiceModes";
 import type { AsrSegment, AsrStatus, DubBuffer, Voice } from "@/types/models";
 
 interface Props {
@@ -14,6 +15,11 @@ interface Props {
   /** Target voice picked in the library; null until chosen. */
   activeVoice: Voice | null;
   activeEngine: string | null;
+  /** OmniVoice/VoxCPM expose Clone/Design/Auto; VoxCPM adds style-on-clone. */
+  supportsVoiceModes: boolean;
+  supportsStyleClone: boolean;
+  /** Qwen: always-available free-text style prompt (no mode toggle). */
+  supportsStylePrompt: boolean;
   onDownloadWeights: () => void;
 }
 
@@ -26,6 +32,9 @@ export function DubEditor({
   asr,
   activeVoice,
   activeEngine,
+  supportsVoiceModes,
+  supportsStyleClone,
+  supportsStylePrompt,
   onDownloadWeights,
 }: Props) {
   const [file, setFile] = useState<File | null>(null);
@@ -42,7 +51,15 @@ export function DubEditor({
 
   const weightsMissing = asr != null && !asr.downloaded;
   const canTranscribe = !!file && !busy && !!asr && asr.downloaded;
-  const canDub = !busy && !!activeVoice && buffer.segments.length > 0;
+  // Effective voice mode: engines with modes derive it (explicit > clone-if-voice
+  // > auto); every other engine is always clone (voice required).
+  const mode: VoiceMode = supportsVoiceModes
+    ? effectiveMode({ voice: buffer.voiceId ?? "", omnivoiceMode: buffer.voiceMode })
+    : "clone";
+  const design = (buffer.voiceDesign ?? "").trim();
+  // clone needs a reference voice; design/auto don't.
+  const needsVoice = mode === "clone";
+  const canDub = !busy && buffer.segments.length > 0 && (!needsVoice || !!activeVoice);
 
   useEffect(() => {
     if (!busy) return;
@@ -72,7 +89,12 @@ export function DubEditor({
   }, [file, onChange]);
 
   const runDub = useCallback(async () => {
-    if (!activeVoice || buffer.segments.length === 0) return;
+    if (buffer.segments.length === 0) return;
+    if (needsVoice && !activeVoice) return;
+    // instruct carries the design/style/clone-style prompt (empty = omitted).
+    // Mirrors TTS: design and clone (with style) forward it; auto never does.
+    const instruct =
+      mode === "design" || mode === "clone" ? (design || undefined) : undefined;
     setBusy("dub");
     setError(null);
     setElapsed(0);
@@ -80,8 +102,11 @@ export function DubEditor({
     try {
       res = await dub({
         segments: buffer.segments.map((s) => ({ start: s.start, end: s.end, text: s.text })),
-        voice: activeVoice.id,
+        voice: activeVoice?.id ?? "",
         engine: activeEngine ?? undefined,
+        // Only mode-aware engines carry an explicit voice_mode; others stay clone.
+        ...(supportsVoiceModes ? { voice_mode: mode } : {}),
+        ...(instruct ? { instruct } : {}),
       });
       setAudio({ data: res.audio, sampleRate: res.sampleRate });
     } catch (e) {
@@ -98,7 +123,7 @@ export function DubEditor({
     } finally {
       setPlaying(false);
     }
-  }, [activeVoice, activeEngine, buffer.segments]);
+  }, [activeVoice, activeEngine, buffer.segments, mode, design, needsVoice, supportsVoiceModes]);
 
   const togglePlay = useCallback(async () => {
     if (!audio) return;
@@ -247,7 +272,11 @@ export function DubEditor({
               </h3>
               <div className="flex items-center gap-2">
                 <span className={`text-xs ${subtle}`}>
-                  {activeVoice ? (
+                  {mode === "design" ? (
+                    "designed voice"
+                  ) : mode === "auto" ? (
+                    "auto voice"
+                  ) : activeVoice ? (
                     <>
                       target voice: <span className={text}>{activeVoice.name}</span>
                     </>
@@ -259,7 +288,7 @@ export function DubEditor({
                   type="button"
                   onClick={() => void runDub()}
                   disabled={!canDub}
-                  title={!activeVoice ? "Pick a target voice in the library first" : "Re-voice the clip"}
+                  title={needsVoice && !activeVoice ? "Pick a target voice in the library first" : "Re-voice the clip"}
                   className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${focusRing} ${
                     canDub ? "bg-orange-600 hover:bg-orange-500" : "bg-orange-600/40 cursor-not-allowed"
                   }`}
@@ -276,6 +305,100 @@ export function DubEditor({
                 </button>
               </div>
             </div>
+
+            {/* Qwen always-available style prompt (built-in voice + optional style) */}
+            {supportsStylePrompt && (
+              <input
+                type="text"
+                value={buffer.voiceDesign ?? ""}
+                onChange={(e) => onChange({ voiceDesign: e.target.value })}
+                placeholder="Style (optional) — e.g. cheerful, slightly faster, whispering"
+                className={`mb-3 w-full border rounded-md px-2 py-1.5 text-sm focus:outline-none focus:border-orange-500 ${
+                  isDark ? "bg-zinc-950 border-zinc-800 text-zinc-100" : "bg-white border-gray-200 text-gray-900"
+                } ${focusRing}`}
+              />
+            )}
+
+            {/* OmniVoice / VoxCPM voice mode: Clone / Design / Auto */}
+            {supportsVoiceModes && (
+              <div className={`mb-3 rounded-lg border p-3 space-y-2 ${isDark ? "border-zinc-800 bg-zinc-950/40" : "border-gray-200 bg-gray-50"}`}>
+                <div className="flex gap-1.5">
+                  {(["clone", "design", "auto"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => onChange({ voiceMode: m })}
+                      className={`flex-1 px-3 py-1.5 text-sm font-medium rounded capitalize transition-colors ${
+                        mode === m
+                          ? "bg-orange-600 text-white"
+                          : isDark
+                            ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      } ${focusRing}`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+                {mode === "clone" && (
+                  <div className="space-y-1.5">
+                    <p className={`text-xs ${subtle}`}>
+                      Re-voices the clip in the library voice:{" "}
+                      <span className="text-orange-400">{activeVoice ? activeVoice.name : "none selected"}</span>
+                    </p>
+                    {supportsStyleClone && (
+                      <input
+                        type="text"
+                        value={buffer.voiceDesign ?? ""}
+                        onChange={(e) => onChange({ voiceDesign: e.target.value })}
+                        placeholder="Style (optional) — e.g. cheerful, slightly faster"
+                        className={`w-full border rounded-md px-2 py-1.5 text-sm focus:outline-none focus:border-orange-500 ${
+                          isDark ? "bg-zinc-950 border-zinc-800 text-zinc-100" : "bg-white border-gray-200 text-gray-900"
+                        } ${focusRing}`}
+                      />
+                    )}
+                  </div>
+                )}
+                {mode === "design" && (
+                  <div className="space-y-1.5">
+                    <input
+                      type="text"
+                      value={buffer.voiceDesign ?? ""}
+                      onChange={(e) => onChange({ voiceDesign: e.target.value })}
+                      placeholder={activeEngine === "voxcpm" ? "e.g. a young woman, gentle and sweet" : "e.g. female, low pitch, british accent"}
+                      className={`w-full border rounded-md px-2 py-1.5 text-sm focus:outline-none focus:border-orange-500 ${
+                        isDark ? "bg-zinc-950 border-zinc-800 text-zinc-100" : "bg-white border-gray-200 text-gray-900"
+                      } ${focusRing}`}
+                    />
+                    {activeEngine === "omnivoice" && (
+                      <div className="flex flex-wrap gap-1">
+                        {DESIGN_CHIPS.map((chip) => (
+                          <button
+                            key={chip}
+                            type="button"
+                            onClick={() => onChange({ voiceDesign: appendDesignChip(buffer.voiceDesign ?? "", chip) })}
+                            className={`px-1.5 py-0.5 text-[11px] rounded border transition-colors ${
+                              isDark
+                                ? "border-zinc-700 text-zinc-400 hover:border-orange-500 hover:text-orange-300"
+                                : "border-gray-300 text-gray-600 hover:border-orange-500 hover:text-orange-600"
+                            } ${focusRing}`}
+                          >
+                            {chip}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {mode === "auto" && (
+                  <p className={`text-xs italic ${subtle}`}>
+                    {activeEngine === "voxcpm"
+                      ? "VoxCPM will design a fresh voice for the clip."
+                      : "OmniVoice will invent a voice for the clip."}
+                  </p>
+                )}
+              </div>
+            )}
 
             <ul className="space-y-2">
               {buffer.segments.map((s, i) => (

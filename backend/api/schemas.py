@@ -207,8 +207,13 @@ class DubSegmentModel(BaseModel):
 
 class DubRequestBody(BaseModel):
     segments: list[DubSegmentModel] = Field(min_length=1, max_length=2000)
-    voice: str = Field(min_length=1, max_length=256)
+    # May be empty for OmniVoice/VoxCPM design/auto modes (no reference voice);
+    # DubService enforces "voice required" for clone downstream.
+    voice: str = Field("", max_length=256)
     engine: str | None = None
+    # OmniVoice / VoxCPM voice mode + design/style prompt (other engines ignore).
+    voice_mode: Literal["clone", "design", "auto"] | None = None
+    instruct: str | None = None
     # per-engine synth knobs, forwarded verbatim (engines ignore what they don't use)
     cfg_scale: float | None = None
     speed: float | None = Field(default=None, ge=0.25, le=4.0)

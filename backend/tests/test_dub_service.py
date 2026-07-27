@@ -70,6 +70,23 @@ def test_empty_voice_raises_400():
     assert e.value.http_status == 400
 
 
+def test_design_mode_allows_empty_voice():
+    synth = _StubSynth()
+    svc = DubService(synth=synth, cache=None)
+    svc.dub([DubSegment(0.0, 1.0, "hi")], voice="", voice_mode="design", instruct="young adult")
+    assert len(synth.calls) == 1
+    assert synth.calls[0].speakers[0].voice_mode == "design"
+    assert synth.calls[0].speakers[0].instruct == "young adult"
+
+
+def test_voice_mode_and_instruct_change_hash():
+    svc = DubService(synth=_StubSynth(), cache=None)
+    base = svc.dub([DubSegment(0.0, 1.0, "hi")], voice="v").cache_hash
+    design = svc.dub([DubSegment(0.0, 1.0, "hi")], voice="", voice_mode="design", instruct="a").cache_hash
+    design2 = svc.dub([DubSegment(0.0, 1.0, "hi")], voice="", voice_mode="design", instruct="b").cache_hash
+    assert base != design != design2 and design != design2
+
+
 class _StubCache:
     def __init__(self, tmp):
         self.enabled = True
