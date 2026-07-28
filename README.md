@@ -317,7 +317,7 @@ npm run build
 
 ## License
 
-**MIT** for the code in this repo. Each bundled engine keeps its own license and model-usage policy — review them before redistributing generated audio:
+**MIT** for the code in this repo — see [LICENSE](LICENSE). Each bundled engine keeps its own license and model-usage policy — review them before redistributing generated audio:
 
 | Engine | License | Model card |
 |---|---|---|
