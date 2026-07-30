@@ -227,6 +227,10 @@ class DubRequestBody(BaseModel):
     repetition_penalty: float | None = Field(default=None, ge=1.0, le=2.0)
     seed: int | None = Field(default=None, ge=0)
     force_regenerate: bool = False
+    # Cross-language dubbing: translate segment text before synthesis.
+    source_language: str | None = None
+    target_language: str | None = None
+    translator: str | None = None
 
 
 # ---- translate ----

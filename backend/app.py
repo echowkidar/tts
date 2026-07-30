@@ -268,6 +268,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     dub_service = DubService(
         synth=synth_service,
         cache=DubCache(settings.cache_dir / "dub", enabled=settings.cache_enabled),
+        translate=translate_service,
     )
 
     app.state.synth_service = synth_service
