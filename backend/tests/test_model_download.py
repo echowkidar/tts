@@ -96,6 +96,35 @@ def test_download_error_sets_error_state():
     assert "network down" in s["error"]
 
 
+def test_cancel_stops_download_and_sets_cancelled():
+    from backend.services.model_download import DownloadCancelled
+
+    def runner(repo_id, prog):
+        # Cooperative runner: spin until the user cancels, like the real one polls.
+        for _ in range(500):
+            if prog.should_cancel():
+                raise DownloadCancelled()
+            time.sleep(0.01)
+    dl = ModelDownloader(runner=runner)
+    dl.start("m2m100")
+    time.sleep(0.05)
+    dl.cancel("m2m100")
+    _wait(dl)
+    s = dl.status()
+    assert s["state"] == "cancelled"
+    assert s["returncode"] == 1
+
+
+def test_ignore_patterns_exposed_to_runner():
+    seen = {}
+    def runner(repo_id, prog):
+        seen["ignore"] = prog.ignore_patterns()
+    dl = ModelDownloader(runner=runner)
+    dl.start("m2m100")
+    _wait(dl)
+    assert "*.ot" in seen["ignore"]  # from the catalog entry
+
+
 def test_start_rejects_non_downloadable_engine():
     dl = ModelDownloader(runner=lambda r, p: None)
     with pytest.raises(ValueError):
@@ -175,6 +204,25 @@ def test_download_endpoint_rejects_non_downloadable():
     client = _make_client(ModelDownloader(runner=lambda r, p: None))
     assert client.get("/api/engines/chatterbox/download").status_code == 400
     assert client.post("/api/engines/chatterbox/download").status_code == 400
+    assert client.post("/api/engines/chatterbox/download/cancel").status_code == 400
+
+
+def test_download_cancel_endpoint():
+    from backend.services.model_download import DownloadCancelled
+
+    def runner(repo_id, prog):
+        for _ in range(500):
+            if prog.should_cancel():
+                raise DownloadCancelled()
+            time.sleep(0.01)
+    dl = ModelDownloader(runner=runner)
+    client = _make_client(dl)
+    client.post("/api/engines/m2m100/download")
+    time.sleep(0.05)
+    r = client.post("/api/engines/m2m100/download/cancel")
+    assert r.status_code == 200
+    _wait(dl)
+    assert client.get("/api/engines/m2m100/download").json()["state"] == "cancelled"
 
 
 def test_download_endpoint_start_and_status():

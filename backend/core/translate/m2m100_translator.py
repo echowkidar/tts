@@ -14,13 +14,19 @@ _MODEL_ID = "facebook/m2m100_418M"
 
 
 class M2M100Translator(Translator):
-    name = "m2m100"
-    display_name = "M2M-100 (418M)"
-    description = "Meta's 100-language translator. Small, fast, MIT-licensed."
-    license = "MIT"
-    model_url = "https://huggingface.co/facebook/m2m100_418M"
+    """M2M-100 in-process translator. Identity is parameterizable so the 418M
+    and 1.2B checkpoints (same architecture, same 100 languages) share this code."""
 
-    def __init__(self, model_id: str = _MODEL_ID, device_request: str = "auto") -> None:
+    license = "MIT"
+
+    def __init__(self, model_id: str = _MODEL_ID, device_request: str = "auto", *,
+                 name: str = "m2m100", display_name: str = "M2M-100 (418M)",
+                 description: str = "Meta's 100-language translator. Small, fast, MIT-licensed.",
+                 model_url: str = "https://huggingface.co/facebook/m2m100_418M") -> None:
+        self.name = name
+        self.display_name = display_name
+        self.description = description
+        self.model_url = model_url
         self._model_id = model_id
         self._device_request = device_request
         self._model = None

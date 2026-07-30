@@ -203,6 +203,14 @@ def start_download(name: str, downloader=Depends(get_model_downloader)) -> Downl
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.post("/{name}/download/cancel", response_model=DownloadStatusModel)
+def cancel_download(name: str, downloader=Depends(get_model_downloader)) -> DownloadStatusModel:
+    """Cancel an in-progress weight download (no-op if it isn't running)."""
+    if name not in _DOWNLOADABLE:
+        raise HTTPException(status_code=400, detail=f"{name} is not downloadable")
+    return DownloadStatusModel(**downloader.cancel(name))
+
+
 @router.get("/{name}/delete-weights", response_model=DeleteWeightsStatusModel)
 def delete_weights_status(name: str, deleter=Depends(get_model_deleter)) -> DeleteWeightsStatusModel:
     """Current weight-deletion state."""

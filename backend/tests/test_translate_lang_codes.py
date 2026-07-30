@@ -4,7 +4,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
-from backend.core.translate.lang_codes import normalize_source, M2M100_LANGS, MADLAD_LANGS
+from backend.core.translate.lang_codes import normalize_source, M2M100_LANGS
 
 
 def test_normalize_passes_known_iso_codes():
@@ -30,5 +30,3 @@ def test_language_lists_are_code_label_pairs():
     assert ("ur", "Urdu") in M2M100_LANGS
     assert all(len(pair) == 2 for pair in M2M100_LANGS)
     assert len(M2M100_LANGS) >= 90
-    assert ("en", "English") in MADLAD_LANGS
-    assert len(MADLAD_LANGS) >= 90
