@@ -30,6 +30,7 @@ from fastapi.responses import JSONResponse
 
 from .api.asr import router as asr_router
 from .api.dub import router as dub_router
+from .api.translate import router as translate_router
 from .api.cache import router as cache_router
 from .api.download import router as download_router
 from .api.engines import router as engines_router
@@ -50,6 +51,8 @@ from .services.engine_uninstall import EngineEnvUninstaller
 from .services.join_cache import JoinCache
 from .services.synth_cache import SynthCache
 from .core.asr.whisper_engine import WhisperEngine
+from .core.translate.m2m100_translator import M2M100Translator
+from .core.translate.madlad_translator import MadladTranslator
 from .core.gpu_gate import GpuGate
 from .services.asr_cache import AsrCache
 from .services.synthesize import SynthService
@@ -243,6 +246,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.voice_registry = voice_registry
     app.state.synth_cache = synth_cache
     app.state.join_cache = join_cache
+    # Machine translation (text -> text). In-process, main venv, GPU-gated, and
+    # absent from EngineManager (like Whisper). Two selectable models.
+    from .services.translate import TranslateService
+    from .services.translate_cache import TranslateCache
+    translate_service = TranslateService(
+        translators={
+            "m2m100": M2M100Translator(device_request=settings.device),
+            "madlad": MadladTranslator(device_request=settings.device),
+        },
+        default="m2m100",
+        gate=gpu_gate,
+        cache=TranslateCache(settings.cache_dir / "translate", enabled=settings.cache_enabled),
+        active_marker=_BACKEND_ROOT / ".last_translator",
+    )
+
     # Dubbing re-voices transcript segments via the synth service; its results
     # cache in their own dub/ dir (DubCache round-trips reliably in-process).
     from .services.dub import DubService
@@ -250,11 +268,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     dub_service = DubService(
         synth=synth_service,
         cache=DubCache(settings.cache_dir / "dub", enabled=settings.cache_enabled),
+        translate=translate_service,
     )
 
     app.state.synth_service = synth_service
     app.state.gpu_gate = gpu_gate
     app.state.asr_service = asr_service
+    app.state.translate_service = translate_service
     app.state.dub_service = dub_service
     app.state.engine_installers = {
         "chatterbox": ChatterboxInstaller(),
@@ -265,7 +285,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.model_downloader = ModelDownloader()
     # asr_service so Whisper's weights are deletable too — it's absent from
     # EngineManager, but it still must be unloaded before its files are removed.
-    app.state.model_deleter = ModelDeleter(em=engine_manager, asr_service=asr_service)
+    app.state.model_deleter = ModelDeleter(
+        em=engine_manager, asr_service=asr_service, translate_service=translate_service)
     app.state.engine_uninstallers = {
         "chatterbox": EngineEnvUninstaller("chatterbox", em=engine_manager),
         "omnivoice": EngineEnvUninstaller("omnivoice", em=engine_manager),
@@ -287,6 +308,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(system_router)
     app.include_router(asr_router)
     app.include_router(dub_router)
+    app.include_router(translate_router)
 
     # ---- static frontend (prod mode only; no-op if frontend/dist is absent)
     _frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"

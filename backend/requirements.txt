@@ -57,6 +57,13 @@ misaki[en]>=0.9.4
 onnxruntime>=1.20
 kittentts @ https://github.com/KittenML/KittenTTS/releases/download/0.8/kittentts-0.8.0-py3-none-any.whl
 
+# Translation (in-process, main venv): M2M-100 418M (facebook/m2m100_418M, MIT)
+# and MADLAD-400 3B (google/madlad400-3b-mt, Apache-2.0). Both are transformers
+# seq2seq models; their tokenizers need sentencepiece. hf_xet is required to
+# download these Xet-backed repos (without it the weights fetch silently fails).
+sentencepiece>=0.1.99
+hf_xet>=1.0
+
 # Chatterbox Multilingual V3 is NOT installed here. It hard-pins
 # transformers==5.2.0, which conflicts with vibevoice's transformers==4.51.3.
 # It installs into a separate environment (backend/venv-chatterbox) and runs

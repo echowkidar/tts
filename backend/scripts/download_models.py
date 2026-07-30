@@ -57,6 +57,17 @@ MODEL_CATALOG: dict[str, dict[str, str]] = {
         "size": "~1.6 GB",
         "label": "Whisper large-v3-turbo (ASR)",
     },
+    # Translation models — text->text, live in TranslateService, not EngineManager.
+    "m2m100": {
+        "repo_id": "facebook/m2m100_418M",
+        "size": "~1 GB",
+        "label": "M2M-100 (418M) translator",
+    },
+    "madlad": {
+        "repo_id": "google/madlad400-3b-mt",
+        "size": "~3 GB",
+        "label": "MADLAD-400 (3B) translator",
+    },
 }
 
 

@@ -227,6 +227,30 @@ class DubRequestBody(BaseModel):
     repetition_penalty: float | None = Field(default=None, ge=1.0, le=2.0)
     seed: int | None = Field(default=None, ge=0)
     force_regenerate: bool = False
+    # Cross-language dubbing: translate segment text before synthesis.
+    source_language: str | None = None
+    target_language: str | None = None
+    translator: str | None = None
+
+
+# ---- translate ----
+
+class TranslateSegmentModel(BaseModel):
+    start: float = Field(0, ge=0)
+    end: float = Field(0, ge=0)
+    text: str = ""
+
+
+class TranslateRequestBody(BaseModel):
+    segments: list[TranslateSegmentModel] | None = Field(default=None, max_length=5000)
+    texts: list[str] | None = Field(default=None, max_length=5000)
+    source_lang: str | None = None
+    target_lang: str = Field(min_length=1, max_length=16)
+    model: str | None = None
+
+
+class TranslateActivateBody(BaseModel):
+    name: str = Field(min_length=1, max_length=32)
 
 
 class AsrStatusResponse(BaseModel):

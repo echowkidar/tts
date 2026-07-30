@@ -19,7 +19,8 @@ from backend.scripts.download_models import MODEL_CATALOG
 
 #: Engines whose weights this downloader can fetch (in-process engines).
 DOWNLOADABLE: frozenset[str] = frozenset(
-    {"vibevoice", "kokoro", "kitten", "omnivoice", "voxcpm", "qwen", "whisper"}
+    {"vibevoice", "kokoro", "kitten", "omnivoice", "voxcpm", "qwen", "whisper",
+     "m2m100", "madlad"}
 )
 
 _MAX_LOG_LINES = 500

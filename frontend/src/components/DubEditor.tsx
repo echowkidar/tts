@@ -4,7 +4,7 @@ import { ApiError, dub, transcribe } from "@/lib/api";
 import { isRtlText, textDirection } from "@/lib/textStats";
 import { focusRing } from "@/lib/theme";
 import { DESIGN_CHIPS, appendDesignChip, effectiveMode, type VoiceMode } from "@/lib/voiceModes";
-import type { AsrSegment, AsrStatus, DubBuffer, Voice } from "@/types/models";
+import type { AsrSegment, AsrStatus, DubBuffer, EngineLanguage, Voice } from "@/types/models";
 
 /** Create an object URL for a Blob/File and revoke it when it changes or unmounts. */
 function useObjectUrl(blob: Blob | null): string | null {
@@ -34,7 +34,12 @@ interface Props {
   supportsStyleClone: boolean;
   /** Qwen: always-available free-text style prompt (no mode toggle). */
   supportsStylePrompt: boolean;
-  onDownloadWeights: () => void;
+  /** Translation: the active model's languages, name, and whether it's downloaded. */
+  translateLanguages: EngineLanguage[];
+  activeTranslator: string;
+  translatorDownloaded: boolean;
+  /** Opens the download dialog for a model name (whisper or a translator). */
+  onDownloadWeights: (name: string) => void;
 }
 
 const ACCEPT = ".wav,.mp3,.flac,.ogg,.m4a,.webm";
@@ -49,6 +54,9 @@ export function DubEditor({
   supportsVoiceModes,
   supportsStyleClone,
   supportsStylePrompt,
+  translateLanguages,
+  activeTranslator,
+  translatorDownloaded,
   onDownloadWeights,
 }: Props) {
   const [file, setFile] = useState<File | null>(null);
@@ -131,6 +139,12 @@ export function DubEditor({
         // Only mode-aware engines carry an explicit voice_mode; others stay clone.
         ...(supportsVoiceModes ? { voice_mode: mode } : {}),
         ...(instruct ? { instruct } : {}),
+        // Cross-language dubbing: translate to the chosen target first.
+        ...(buffer.targetLanguage ? {
+          source_language: buffer.detectedLanguage || undefined,
+          target_language: buffer.targetLanguage,
+          translator: activeTranslator,
+        } : {}),
       });
       // A native <audio> reads the WAV header, so no sample rate needed here.
       setDubBlob(new Blob([res.audio], { type: "audio/wav" }));
@@ -139,7 +153,8 @@ export function DubEditor({
     } finally {
       setBusy(null);
     }
-  }, [activeVoice, activeEngine, buffer.segments, mode, design, needsVoice, supportsVoiceModes]);
+  }, [activeVoice, activeEngine, buffer.segments, buffer.targetLanguage, buffer.detectedLanguage,
+      mode, design, needsVoice, supportsVoiceModes, activeTranslator]);
 
   const download = useCallback(() => {
     if (!dubBlob) return;
@@ -184,7 +199,7 @@ export function DubEditor({
           </p>
           <button
             type="button"
-            onClick={onDownloadWeights}
+            onClick={() => onDownloadWeights("whisper")}
             className={`mt-4 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium ${focusRing}`}
           >
             Download Whisper (1.6 GB)
@@ -305,6 +320,37 @@ export function DubEditor({
                   )}
                 </button>
               </div>
+            </div>
+
+            {/* Target language: same-language by default, or translate before synth */}
+            <div className="mb-3 flex items-center gap-2 flex-wrap">
+              <label className={`text-xs ${subtle}`} htmlFor="dub-target-lang">Language</label>
+              <select
+                id="dub-target-lang"
+                value={buffer.targetLanguage ?? ""}
+                onChange={(e) => onChange({ targetLanguage: e.target.value || null })}
+                className={`rounded-md border px-2 py-1.5 text-sm ${
+                  isDark ? "bg-zinc-950 border-zinc-800 text-zinc-100" : "bg-white border-gray-200 text-gray-900"
+                } ${focusRing}`}
+              >
+                <option value="">Same language (no translation)</option>
+                {translateLanguages.map((l) => (
+                  <option key={l.code} value={l.code}>{l.label}</option>
+                ))}
+              </select>
+              {buffer.targetLanguage && (
+                translatorDownloaded ? (
+                  <span className={`text-xs ${subtle}`}>translating with {activeTranslator}</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onDownloadWeights(activeTranslator)}
+                    className={`px-2 py-1 rounded text-xs font-medium bg-orange-600 hover:bg-orange-500 text-white ${focusRing}`}
+                  >
+                    Download translation model
+                  </button>
+                )
+              )}
             </div>
 
             {/* Qwen always-available style prompt (built-in voice + optional style) */}

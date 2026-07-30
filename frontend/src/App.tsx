@@ -25,7 +25,8 @@ import { useVoices } from "@/hooks/useVoices";
 import { useEngine } from "@/hooks/useEngine";
 import { useProjectMode } from "@/hooks/useProjectMode";
 import { useAsrStatus } from "@/hooks/useAsrStatus";
-import { ApiError, downloadPodcast, synthesizeWav, transcribe, updateVoiceMeta } from "@/lib/api";
+import { useTranslateStatus } from "@/hooks/useTranslateStatus";
+import { ApiError, activateTranslator, downloadPodcast, synthesizeWav, transcribe, updateVoiceMeta } from "@/lib/api";
 import { segmentsToSrt } from "@/lib/subtitles";
 import {
   AudioPlayer,
@@ -209,6 +210,9 @@ export default function App() {
   // Whisper's status. Fetched up-front so the Transcribe language picker is
   // populated before the weights lazily load on first transcription.
   const { status: asrStatus, refresh: refreshAsrStatus } = useAsrStatus();
+  const { status: translateStatus, refresh: refreshTranslate } = useTranslateStatus();
+  const activeTranslatorModel =
+    translateStatus?.models.find((m) => m.name === translateStatus.active) ?? null;
   const [deleteWeightsEngine, setDeleteWeightsEngine] = useState<string | null>(null);
   const [uninstallEngine, setUninstallEngine] = useState<string | null>(null);
 
@@ -948,7 +952,10 @@ export default function App() {
             buffer={pm.transcribe}
             onChange={pm.setTranscribe}
             asr={asrStatus}
-            onDownloadWeights={() => setDownloadEngine("whisper")}
+            translateLanguages={activeTranslatorModel?.languages ?? []}
+            activeTranslator={translateStatus?.active ?? "m2m100"}
+            translatorDownloaded={activeTranslatorModel?.downloaded ?? false}
+            onDownloadWeights={(n) => setDownloadEngine(n)}
             onSendToTts={(text) => {
               pm.setTtsText(text);
               pm.setMode("tts");
@@ -965,7 +972,10 @@ export default function App() {
             supportsVoiceModes={supportsVoiceModes}
             supportsStyleClone={activeEngineInfo?.supports_style_clone ?? false}
             supportsStylePrompt={supportsStylePrompt}
-            onDownloadWeights={() => setDownloadEngine("whisper")}
+            translateLanguages={activeTranslatorModel?.languages ?? []}
+            activeTranslator={translateStatus?.active ?? "m2m100"}
+            translatorDownloaded={activeTranslatorModel?.downloaded ?? false}
+            onDownloadWeights={(n) => setDownloadEngine(n)}
           />
         ) : pm.mode === "tts" ? (
           <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -1117,6 +1127,15 @@ export default function App() {
         isDark={isDark}
         engines={engines}
         asr={asrStatus}
+        translate={translateStatus}
+        onActivateTranslator={async (name) => {
+          try {
+            await activateTranslator(name);
+            await refreshTranslate();
+          } catch (err) {
+            showError(err, "Translation model switch failed");
+          }
+        }}
         activeEngine={activeEngine}
         onSelectEngine={async (name) => {
           try {
@@ -1166,6 +1185,7 @@ export default function App() {
           engineName={downloadEngine}
           displayName={
             engines.find((e) => e.name === downloadEngine)?.display_name ??
+            translateStatus?.models.find((m) => m.name === downloadEngine)?.display_name ??
             (downloadEngine === "whisper" ? "Whisper large-v3-turbo (ASR)" : downloadEngine)
           }
           onClose={() => setDownloadEngine(null)}
@@ -1176,6 +1196,12 @@ export default function App() {
             // to clear the Transcribe download gate.
             if (name === "whisper") {
               await refreshAsrStatus();
+              setDownloadEngine(null);
+              return;
+            }
+            // Translation models are also outside the engine registry.
+            if (name === "m2m100" || name === "madlad") {
+              await refreshTranslate();
               setDownloadEngine(null);
               return;
             }
@@ -1196,14 +1222,17 @@ export default function App() {
           engineName={deleteWeightsEngine}
           displayName={
             engines.find((e) => e.name === deleteWeightsEngine)?.display_name ??
+            translateStatus?.models.find((m) => m.name === deleteWeightsEngine)?.display_name ??
             (deleteWeightsEngine === "whisper" ? asrStatus?.display_name : null) ??
             deleteWeightsEngine
           }
           onClose={() => setDeleteWeightsEngine(null)}
           onDone={async () => {
-            // Whisper is ASR, not a registered engine: refresh its own status
-            // so the popup flips back to "Download" and Transcribe re-gates.
+            // Whisper (ASR) and the translation models are outside the engine
+            // registry: refresh their own status so the card flips back to
+            // "Download" instead of trying to reload a non-existent TTS engine.
             if (deleteWeightsEngine === "whisper") await refreshAsrStatus();
+            else if (deleteWeightsEngine === "m2m100" || deleteWeightsEngine === "madlad") await refreshTranslate();
             else await refreshEngines();
             setDeleteWeightsEngine(null);
           }}

@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { PanelRightClose, PanelRightOpen, Github, Linkedin, Youtube, Globe } from "lucide-react";
 import { focusRing } from "@/lib/theme";
 import { defaultControlPanelOpen } from "@/lib/layout";
-import type { AsrStatus, EngineInfo } from "@/types/models";
+import type { AsrStatus, EngineInfo, TranslateStatus } from "@/types/models";
 import { EngineSelector } from "./EngineSelector";
+import { TranslationCard } from "./TranslationCard";
 import { CfgScaleBody } from "./CfgScaleControl";
 import { getCfgHints } from "@/lib/engineHints";
 import { ExaggerationBody } from "./ExaggerationControl";
@@ -43,6 +44,9 @@ interface Props {
   onDownloadEngine: (name: string) => void;
   onDeleteWeights: (name: string) => void;
   onUninstallEngine: (name: string) => void;
+  /** Translation models (m2m100/madlad). Null while /api/translate/status loads. */
+  translate: TranslateStatus | null;
+  onActivateTranslator: (name: string) => void;
   cfgScale: number;
   onCfgScaleChange: (v: number) => void;
   exaggeration: number;
@@ -65,6 +69,8 @@ export function ControlPanel({
   onDownloadEngine,
   onDeleteWeights,
   onUninstallEngine,
+  translate,
+  onActivateTranslator,
   cfgScale,
   onCfgScaleChange,
   exaggeration,
@@ -154,6 +160,20 @@ export function ControlPanel({
             onDownload={onDownloadEngine}
             onDeleteWeights={onDeleteWeights}
             onUninstall={onUninstallEngine}
+          />
+        </section>
+
+        {/* Translation section */}
+        <section className="p-3 dark:bg-zinc-900 dark:border-zinc-800 bg-gray-100/80 border border-gray-200 rounded-lg">
+          <h3 className={`text-xs font-semibold uppercase tracking-wide mb-2 ${heading}`}>
+            Translation
+          </h3>
+          <TranslationCard
+            isDark={isDark}
+            translate={translate}
+            onActivate={onActivateTranslator}
+            onDownload={onDownloadEngine}
+            onDelete={onDeleteWeights}
           />
         </section>
 

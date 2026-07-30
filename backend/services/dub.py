@@ -78,13 +78,17 @@ class DubResult:
 
 
 class DubService:
-    def __init__(self, synth: "SynthService", cache: "JoinCache | None" = None) -> None:
+    def __init__(self, synth: "SynthService", cache: "JoinCache | None" = None,
+                 translate=None) -> None:
         self._synth = synth
         self._cache = cache
+        self._translate = translate
 
     def dub(self, segments: list[DubSegment], voice: str,
             engine: str | None = None, voice_mode: str | None = None,
-            instruct: str | None = None, **knobs: Any) -> DubResult:
+            instruct: str | None = None, source_language: str | None = None,
+            target_language: str | None = None, translator: str | None = None,
+            **knobs: Any) -> DubResult:
         # design/auto carry no reference voice; only clone (or an engine with no
         # voice modes, where SynthService forces clone) needs one. SynthService
         # does the per-engine enforcement — this is just an early, friendly 400.
@@ -95,7 +99,19 @@ class DubService:
         if not active:
             raise TextInvalid("no non-empty segments to dub")
 
-        cache_hash = self._hash(active, voice, engine, voice_mode, instruct, knobs)
+        # Cross-language dubbing: translate segment text before synthesis when a
+        # target language is set and differs from the source. A different target
+        # (or model) must not collide with the same-language dub, so both fold
+        # into the cache key.
+        do_translate = bool(
+            self._translate is not None
+            and target_language and target_language.strip()
+            and (source_language or "").strip().lower() != target_language.strip().lower()
+        )
+        tgt = target_language.strip() if do_translate else None
+
+        cache_hash = self._hash(active, voice, engine, voice_mode, instruct,
+                                source_language, tgt, translator, knobs)
         if self._cache is not None and self._cache.enabled and not knobs.get("force_regenerate"):
             hit = self._cache.get(cache_hash)
             if hit is not None:
@@ -130,14 +146,23 @@ class DubService:
             # (the result is one continuous take). Collapse whitespace/newlines so
             # SynthService treats it as a single utterance, not multiple lines.
             joined_text = " ".join(" ".join(s.text.split()) for s in active)
+            if do_translate:
+                joined_text = self._translate.translate(
+                    [joined_text], source_lang=source_language, target_lang=tgt,
+                    model=translator).texts[0]
             pcm, sample_rate = _synth(joined_text)
             pieces.append((active[0].start, active[0].start, pcm))
         else:
             # Clone (or an engine without voice modes): the fixed reference voice
             # keeps every take consistent, so synthesize per segment and preserve
             # the original inter-segment pauses.
-            for seg in active:
-                pcm, sr = _synth(seg.text)
+            seg_texts = [s.text for s in active]
+            if do_translate:
+                seg_texts = self._translate.translate(
+                    seg_texts, source_lang=source_language, target_lang=tgt,
+                    model=translator).texts
+            for seg, text in zip(active, seg_texts):
+                pcm, sr = _synth(text)
                 sample_rate = sr  # all segments share one engine -> one sample rate
                 pieces.append((seg.start, seg.end, pcm))
 
@@ -159,11 +184,13 @@ class DubService:
     @staticmethod
     def _hash(segments: list[DubSegment], voice: str, engine: str | None,
               voice_mode: str | None, instruct: str | None,
-              knobs: dict[str, Any]) -> str:
+              source_language: str | None, target_language: str | None,
+              translator: str | None, knobs: dict[str, Any]) -> str:
         canonical = json.dumps({
             "segs": [{"t": s.text, "s": round(s.start, 3), "e": round(s.end, 3)} for s in segments],
             "voice": voice, "engine": engine,
             "voice_mode": voice_mode, "instruct": instruct,
+            "src": source_language, "tgt": target_language, "trm": translator,
             "knobs": {k: knobs.get(k) for k in _KNOBS},
         }, sort_keys=True, ensure_ascii=False)
         return "dub-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:24]

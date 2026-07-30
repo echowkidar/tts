@@ -13,12 +13,14 @@ const EMPTY_TRANSCRIBE: TranscribeBuffer = {
   timestamps: true,
   segments: [],
   detectedLanguage: "",
+  targetLanguage: null,
 };
 const EMPTY_DUB: DubBuffer = {
   fileName: "",
   segments: [],
   detectedLanguage: "",
   voiceId: null,
+  targetLanguage: null,
 };
 
 function readMode(): ProjectMode | null {

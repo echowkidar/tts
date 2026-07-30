@@ -12,6 +12,7 @@ import type {
   SynthBase64Response,
   SynthSpeaker,
   SystemStats,
+  TranslateStatus,
   UninstallStatus,
   UpdateInfo,
   UpdateRunStatus,
@@ -124,6 +125,39 @@ export interface DubArgs {
   engine?: string;
   voice_mode?: "clone" | "design" | "auto";
   instruct?: string;
+  source_language?: string;
+  target_language?: string;
+  translator?: string;
+}
+
+// ---- translation ----
+
+export async function getTranslateStatus(): Promise<TranslateStatus> {
+  return jsonOrThrow<TranslateStatus>(await fetch(`${API_BASE}/translate/status`));
+}
+
+export async function activateTranslator(name: string): Promise<TranslateStatus> {
+  return jsonOrThrow<TranslateStatus>(await fetch(`${API_BASE}/translate/activate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  }));
+}
+
+export interface TranslateSegment { start: number; end: number; text: string }
+
+/** Translate a list of segments; returns the translated segments (same order). */
+export async function translateSegments(args: {
+  segments: TranslateSegment[];
+  source_lang: string | null;
+  target_lang: string;
+  model?: string;
+}): Promise<{ segments: TranslateSegment[]; source_lang: string; target_lang: string }> {
+  return jsonOrThrow(await fetch(`${API_BASE}/translate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  }));
 }
 
 /** Re-voice transcript segments; returns the dubbed WAV as an ArrayBuffer. */

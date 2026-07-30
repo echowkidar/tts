@@ -29,6 +29,9 @@ def dub(body: DubRequestBody, svc=Depends(get_dub_service)) -> Response:
             inference_steps=body.inference_steps, temperature=body.temperature,
             top_p=body.top_p, top_k=body.top_k, repetition_penalty=body.repetition_penalty,
             seed=body.seed, force_regenerate=body.force_regenerate,
+            source_language=body.source_language,
+            target_language=body.target_language,
+            translator=body.translator,
         )
     except BackendError:
         raise

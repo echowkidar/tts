@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Copy, Download, FileAudio, Loader2, Send, Upload } from "lucide-react";
-import { ApiError, transcribe } from "@/lib/api";
+import { Copy, Download, FileAudio, Languages, Loader2, Send, Upload } from "lucide-react";
+import { ApiError, transcribe, translateSegments } from "@/lib/api";
 import { segmentsToSrt, segmentsToVtt } from "@/lib/subtitles";
 import { isRtlText, textDirection } from "@/lib/textStats";
 import { focusRing } from "@/lib/theme";
-import type { AsrStatus, TranscribeBuffer } from "@/types/models";
+import type { AsrSegment, AsrStatus, EngineLanguage, TranscribeBuffer } from "@/types/models";
 
 interface Props {
   isDark: boolean;
   buffer: TranscribeBuffer;
   onChange: (partial: Partial<TranscribeBuffer>) => void;
   asr: AsrStatus | null;
-  onDownloadWeights: () => void;
+  /** Translation: the active model's languages, name, and whether it's downloaded. */
+  translateLanguages: EngineLanguage[];
+  activeTranslator: string;
+  translatorDownloaded: boolean;
+  /** Opens the download dialog for a model name (whisper or a translator). */
+  onDownloadWeights: (name: string) => void;
   onSendToTts: (text: string) => void;
 }
 
@@ -31,6 +36,9 @@ export function TranscribeEditor({
   buffer,
   onChange,
   asr,
+  translateLanguages,
+  activeTranslator,
+  translatorDownloaded,
   onDownloadWeights,
   onSendToTts,
 }: Props) {
@@ -39,7 +47,28 @@ export function TranscribeEditor({
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [translated, setTranslated] = useState<AsrSegment[] | null>(null);
+  const [translating, setTranslating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const runTranslate = useCallback(async () => {
+    if (!buffer.targetLanguage || buffer.segments.length === 0) return;
+    setTranslating(true);
+    setError(null);
+    try {
+      const res = await translateSegments({
+        segments: buffer.segments.map((s) => ({ start: s.start, end: s.end, text: s.text })),
+        source_lang: buffer.detectedLanguage || null,
+        target_lang: buffer.targetLanguage,
+        model: activeTranslator,
+      });
+      setTranslated(res.segments);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Translation failed");
+    } finally {
+      setTranslating(false);
+    }
+  }, [buffer.targetLanguage, buffer.segments, buffer.detectedLanguage, activeTranslator]);
 
   const weightsMissing = asr != null && !asr.downloaded;
   const canRun = !!file && !busy && !!asr && asr.downloaded;
@@ -101,7 +130,7 @@ export function TranscribeEditor({
           </p>
           <button
             type="button"
-            onClick={onDownloadWeights}
+            onClick={() => onDownloadWeights("whisper")}
             className={`mt-4 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium ${focusRing}`}
           >
             Download Whisper (1.6 GB)
@@ -282,6 +311,89 @@ export function TranscribeEditor({
                   ))}
                 </ul>
               </details>
+            )}
+          </div>
+        )}
+
+        {buffer.segments.length > 0 && (
+          <div className={`p-4 rounded-xl border ${panel}`}>
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <Languages className="w-4 h-4 text-orange-400" />
+              <label className={`text-sm font-semibold ${text}`} htmlFor="tr-target-lang">Translate to</label>
+              <select
+                id="tr-target-lang"
+                value={buffer.targetLanguage ?? ""}
+                onChange={(e) => { onChange({ targetLanguage: e.target.value || null }); setTranslated(null); }}
+                className={`rounded-md border px-2 py-1.5 text-sm ${
+                  isDark ? "bg-zinc-950 border-zinc-800 text-zinc-100" : "bg-white border-gray-200 text-gray-900"
+                } ${focusRing}`}
+              >
+                <option value="">Choose a language…</option>
+                {translateLanguages.map((l) => (
+                  <option key={l.code} value={l.code}>{l.label}</option>
+                ))}
+              </select>
+              {buffer.targetLanguage && !translatorDownloaded ? (
+                <button
+                  type="button"
+                  onClick={() => onDownloadWeights(activeTranslator)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium text-white bg-orange-600 hover:bg-orange-500 ${focusRing}`}
+                >
+                  Download translation model
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void runTranslate()}
+                  disabled={!buffer.targetLanguage || translating}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium text-white transition-colors ${focusRing} ${
+                    buffer.targetLanguage && !translating ? "bg-orange-600 hover:bg-orange-500" : "bg-orange-600/40 cursor-not-allowed"
+                  }`}
+                >
+                  {translating ? (
+                    <span className="flex items-center gap-1.5"><Loader2 className="w-4 h-4 animate-spin" /> Translating…</span>
+                  ) : (
+                    "Translate"
+                  )}
+                </button>
+              )}
+              <span className={`text-xs ${subtle}`}>with {activeTranslator}</span>
+            </div>
+
+            {translated && (
+              <>
+                <div className="flex items-center justify-end gap-2 mb-2">
+                  <button
+                    type="button"
+                    className={btn}
+                    onClick={() => void navigator.clipboard.writeText(translated.map((s) => s.text).join(" "))}
+                  >
+                    <span className="flex items-center gap-1.5"><Copy className="w-4 h-4" /> Copy</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={btn}
+                    onClick={() => saveText(`${buffer.fileName || "transcript"}.${buffer.targetLanguage}.srt`, segmentsToSrt(translated), "text/plain")}
+                  >
+                    <span className="flex items-center gap-1.5"><Download className="w-4 h-4" /> .srt</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={btn}
+                    onClick={() => saveText(`${buffer.fileName || "transcript"}.${buffer.targetLanguage}.vtt`, segmentsToVtt(translated), "text/vtt")}
+                  >
+                    <span className="flex items-center gap-1.5"><Download className="w-4 h-4" /> .vtt</span>
+                  </button>
+                </div>
+                <ul className="space-y-1 text-sm">
+                  {translated.map((s, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className={`tabular-nums text-xs pt-0.5 shrink-0 ${subtle}`}>[{s.start.toFixed(2)}–{s.end.toFixed(2)}]</span>
+                      <span dir={textDirection(s.text)} className={`${isRtlText(s.text) ? "text-right" : "text-left"} ${text}`}>{s.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </div>
         )}

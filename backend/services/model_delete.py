@@ -22,7 +22,8 @@ from backend.scripts.download_models import MODEL_CATALOG
 #: not a TTS engine, so it lives in AsrService rather than EngineManager — but
 #: its 1.6 GB is reclaimable like any other.
 DELETABLE: frozenset[str] = frozenset(
-    {"vibevoice", "kokoro", "kitten", "omnivoice", "chatterbox", "voxcpm", "qwen", "whisper"}
+    {"vibevoice", "kokoro", "kitten", "omnivoice", "chatterbox", "voxcpm", "qwen", "whisper",
+     "m2m100", "madlad"}
 )
 
 _MAX_LOG_LINES = 500
@@ -58,11 +59,13 @@ class ModelDeleter:
         *,
         em=None,
         asr_service=None,
+        translate_service=None,
         repo_dir_resolver: RepoDirResolver | None = None,
         remover: Remover | None = None,
     ) -> None:
         self._em = em
         self._asr = asr_service
+        self._translate = translate_service
         self._resolve = repo_dir_resolver or _default_repo_dir
         self._remove = remover or shutil.rmtree
         self._lock = threading.Lock()
@@ -108,6 +111,11 @@ class ModelDeleter:
         asr_engine = getattr(self._asr, "engine", None)
         if asr_engine is not None and getattr(asr_engine, "name", None) == engine_name:
             return asr_engine
+        if self._translate is not None and engine_name in ("m2m100", "madlad"):
+            try:
+                return self._translate.get(engine_name)
+            except KeyError:
+                return None
         if self._em is not None:
             try:
                 return self._em.get_engine(engine_name)
