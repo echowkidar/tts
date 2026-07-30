@@ -26,6 +26,25 @@ export interface DubBuffer {
   voiceMode?: "clone" | "design" | "auto";
   /** Design/style prompt (OmniVoice design, VoxCPM style, Qwen style). */
   voiceDesign?: string;
+  /** Target language code for cross-language dubbing. null = same language. */
+  targetLanguage: string | null;
+}
+
+export interface TranslateModelInfo {
+  name: string;
+  display_name: string;
+  description: string;
+  license: string;
+  model_url: string;
+  loaded: boolean;
+  downloaded: boolean;
+  languages: EngineLanguage[];
+  needs_source_lang: boolean;
+}
+
+export interface TranslateStatus {
+  active: string;
+  models: TranslateModelInfo[];
 }
 
 export interface TranscribeBuffer {
@@ -36,6 +55,8 @@ export interface TranscribeBuffer {
   timestamps: boolean;
   segments: AsrSegment[];
   detectedLanguage: string;
+  /** Target language for translating the transcript. null = no translation. */
+  targetLanguage: string | null;
 }
 
 export interface AsrStatus {
