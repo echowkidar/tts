@@ -164,8 +164,11 @@ def test_parse_model_selection_rejects_unknown():
 
 
 def test_catalog_has_expected_engines():
-    # "whisper" is ASR, not a TTS engine, but it rides the same weight downloader.
-    assert set(dm.MODEL_CATALOG) == {"vibevoice", "kokoro", "kitten", "chatterbox", "omnivoice", "voxcpm", "qwen", "whisper"}
+    # "whisper" is ASR and "m2m100"/"madlad" are translators — not TTS engines,
+    # but they ride the same weight downloader.
+    assert set(dm.MODEL_CATALOG) == {"vibevoice", "kokoro", "kitten", "chatterbox",
+                                     "omnivoice", "voxcpm", "qwen", "whisper",
+                                     "m2m100", "madlad"}
     assert dm.MODEL_CATALOG["kokoro"]["repo_id"] == "hexgrad/Kokoro-82M"
     assert dm.MODEL_CATALOG["omnivoice"]["repo_id"] == "k2-fsa/OmniVoice"
 
