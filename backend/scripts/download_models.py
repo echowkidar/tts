@@ -14,7 +14,7 @@ from pathlib import Path
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent  # backend/
 
 # Ordered: drives display order in the picker.
-MODEL_CATALOG: dict[str, dict[str, str]] = {
+MODEL_CATALOG: dict[str, dict[str, object]] = {
     "vibevoice": {
         "repo_id": "vibevoice/VibeVoice-1.5B",
         "size": "~5.4 GB",
@@ -58,15 +58,19 @@ MODEL_CATALOG: dict[str, dict[str, str]] = {
         "label": "Whisper large-v3-turbo (ASR)",
     },
     # Translation models — text->text, live in TranslateService, not EngineManager.
+    # `ignore` skips non-PyTorch weight formats these repos also ship (rust/tf/
+    # flax/gguf) so we don't download gigabytes we never load.
     "m2m100": {
         "repo_id": "facebook/m2m100_418M",
         "size": "~1 GB",
         "label": "M2M-100 (418M) translator",
+        "ignore": ["*.ot", "*.h5", "*.msgpack", "*.gguf"],
     },
-    "madlad": {
-        "repo_id": "google/madlad400-3b-mt",
-        "size": "~3 GB",
-        "label": "MADLAD-400 (3B) translator",
+    "m2m100_large": {
+        "repo_id": "facebook/m2m100_1.2B",
+        "size": "~5 GB",
+        "label": "M2M-100 (1.2B) translator",
+        "ignore": ["*.ot", "*.h5", "*.msgpack", "*.gguf"],
     },
 }
 
@@ -98,7 +102,7 @@ def download_models(keys: list[str], models_dir: Path | str | None = None) -> No
     for key in keys:
         spec = MODEL_CATALOG[key]
         print(f"[models] Downloading {spec['label']} ({spec['size']}) …", flush=True)
-        snapshot_download(repo_id=spec["repo_id"])
+        snapshot_download(repo_id=spec["repo_id"], ignore_patterns=(spec.get("ignore") or None))
         print(f"[models] {spec['label']} ready.", flush=True)
 
 

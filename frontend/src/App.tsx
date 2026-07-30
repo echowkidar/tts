@@ -1200,7 +1200,7 @@ export default function App() {
               return;
             }
             // Translation models are also outside the engine registry.
-            if (name === "m2m100" || name === "madlad") {
+            if (translateStatus?.models.some((m) => m.name === name)) {
               await refreshTranslate();
               setDownloadEngine(null);
               return;
@@ -1232,7 +1232,7 @@ export default function App() {
             // registry: refresh their own status so the card flips back to
             // "Download" instead of trying to reload a non-existent TTS engine.
             if (deleteWeightsEngine === "whisper") await refreshAsrStatus();
-            else if (deleteWeightsEngine === "m2m100" || deleteWeightsEngine === "madlad") await refreshTranslate();
+            else if (translateStatus?.models.some((m) => m.name === deleteWeightsEngine)) await refreshTranslate();
             else await refreshEngines();
             setDeleteWeightsEngine(null);
           }}

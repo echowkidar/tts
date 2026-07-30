@@ -10,6 +10,7 @@ injectable `runner` (default `_default_runner`) so tests drive a fake.
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 from collections import deque
@@ -20,11 +21,15 @@ from backend.scripts.download_models import MODEL_CATALOG
 #: Engines whose weights this downloader can fetch (in-process engines).
 DOWNLOADABLE: frozenset[str] = frozenset(
     {"vibevoice", "kokoro", "kitten", "omnivoice", "voxcpm", "qwen", "whisper",
-     "m2m100", "madlad"}
+     "m2m100", "m2m100_large"}
 )
 
 _MAX_LOG_LINES = 500
 _SPEED_WINDOW = 30  # number of (ts, bytes) samples kept for speed/ETA
+
+
+class DownloadCancelled(Exception):
+    """Raised inside the runner when the user cancels an in-progress download."""
 
 # A runner downloads `repo_id`, reporting progress via the given Progress.
 Runner = Callable[[str, "Progress"], None]
@@ -44,6 +49,12 @@ class Progress:
 
     def log(self, line: str) -> None:
         self._d._log(line)
+
+    def ignore_patterns(self) -> list[str]:
+        return list(self._d._ignore)
+
+    def should_cancel(self) -> bool:
+        return self._d._cancel_event.is_set()
 
 
 class ModelDownloader:
@@ -68,6 +79,8 @@ class ModelDownloader:
         self._error: str | None = None
         self._returncode: int | None = None
         self._samples: Deque[Tuple[float, int]] = deque(maxlen=_SPEED_WINDOW)
+        self._cancel_event = threading.Event()
+        self._ignore: list[str] = []
 
     # -- public API
     def status(self) -> dict:
@@ -93,6 +106,8 @@ class ModelDownloader:
             self._log_lines = []
             self._error = None
             self._returncode = None
+            self._ignore = list(MODEL_CATALOG[engine].get("ignore") or [])
+            self._cancel_event.clear()
             self._samples.clear()
             self._samples.append((self._clock(), 0))
             self._thread = threading.Thread(
@@ -101,10 +116,24 @@ class ModelDownloader:
             self._thread.start()
             return self._snapshot_locked()
 
+    def cancel(self, engine: str | None = None) -> dict:
+        """Signal an in-progress download to stop. No-op if idle/done."""
+        with self._lock:
+            if self._state == "downloading" and (engine is None or engine == self._engine):
+                self._cancel_event.set()
+                self._log_lines.append("Cancelling…")
+            return self._snapshot_locked()
+
     # -- internals
     def _run(self, repo_id: str) -> None:
         try:
             self._runner(repo_id, Progress(self))
+        except DownloadCancelled:
+            with self._lock:
+                self._log_lines.append("Download cancelled.")
+                self._state = "cancelled"
+                self._returncode = 1
+            return
         except Exception as exc:  # noqa: BLE001
             with self._lock:
                 self._error = str(exc)
@@ -168,14 +197,20 @@ class ModelDownloader:
         }
 
 
-def _repo_total_bytes(repo_id: str) -> int | None:
-    """Best-effort total download size for a repo's current revision."""
+def _repo_total_bytes(repo_id: str, ignore: list[str] | None = None) -> int | None:
+    """Best-effort total download size for a repo, excluding ignored files."""
+    import fnmatch
+
+    ignore = ignore or []
     try:
         from huggingface_hub import HfApi
 
         info = HfApi().model_info(repo_id, files_metadata=True, timeout=10)
         total = 0
         for sib in info.siblings or []:
+            name = sib.rfilename
+            if any(fnmatch.fnmatch(name, pat) for pat in ignore):
+                continue
             size = getattr(sib, "size", None)
             if size is None:
                 lfs = getattr(sib, "lfs", None)
@@ -187,22 +222,32 @@ def _repo_total_bytes(repo_id: str) -> int | None:
         return None
 
 
+# The download runs in a CHILD PROCESS so cancellation can terminate it
+# mid-file (snapshot_download is a blocking call a daemon thread can't interrupt).
+# The child reads repo_id + ignore patterns from argv and inherits HF_HOME.
+_CHILD_SRC = (
+    "import sys; from huggingface_hub import snapshot_download; "
+    "snapshot_download(sys.argv[1], ignore_patterns=(sys.argv[2:] or None))"
+)
+
+
 def _default_runner(repo_id: str, progress: Progress) -> None:
     """Download `repo_id` into the local HF cache with live byte progress.
 
-    huggingface_hub ≥0.36 does NOT propagate ``tqdm_class`` to individual
-    file downloads (only to the outer file-count bar), so a tqdm subclass
-    cannot intercept byte-level progress. Instead we poll the local blobs
-    directory every 0.5 s and push size deltas so the UI bar advances.
+    Runs snapshot_download in a subprocess so the user can cancel it (a blocking
+    call in a daemon thread can't be interrupted). We poll the local blobs
+    directory to advance the UI bar, and terminate the child on cancel.
     """
-    import threading
+    import subprocess
+    import sys
+    import tempfile
     from pathlib import Path as _Path
 
-    from huggingface_hub import snapshot_download
     from huggingface_hub.constants import HF_HUB_CACHE
 
+    ignore = progress.ignore_patterns()
     progress.log(f"Resolving {repo_id} …")
-    total = _repo_total_bytes(repo_id)
+    total = _repo_total_bytes(repo_id, ignore)
     if total:
         progress.set_total(total)
         progress.log(f"Total download size: {total / (1024 * 1024):.0f} MB")
@@ -211,11 +256,7 @@ def _default_runner(repo_id: str, progress: Progress) -> None:
 
     # HF stores blobs (complete + *.incomplete in-progress) at:
     # {HF_HUB_CACHE}/models--{org}--{name}/blobs/
-    blobs_dir = (
-        _Path(HF_HUB_CACHE)
-        / f"models--{repo_id.replace('/', '--')}"
-        / "blobs"
-    )
+    blobs_dir = _Path(HF_HUB_CACHE) / f"models--{repo_id.replace('/', '--')}" / "blobs"
 
     def _dir_bytes(path: _Path) -> int:
         try:
@@ -223,28 +264,51 @@ def _default_runner(repo_id: str, progress: Progress) -> None:
         except OSError:
             return 0
 
-    # Bytes already cached before this download started (resume scenario).
-    baseline = _dir_bytes(blobs_dir)
+    baseline = _dir_bytes(blobs_dir)  # bytes already cached (resume scenario)
     if baseline > 0:
-        progress.add_bytes(baseline)  # show pre-cached bytes immediately
+        progress.add_bytes(baseline)
+    polled = 0
 
-    _polled: list[int] = [0]  # bytes reported so far via polling (delta from baseline)
-    _stop = threading.Event()
-
-    def _poll() -> None:
-        while not _stop.is_set():
-            _stop.wait(0.5)
+    log_file = tempfile.NamedTemporaryFile("w+", suffix=".log", delete=False)
+    log_path = _Path(log_file.name)
+    log_file.close()
+    proc = subprocess.Popen(
+        [sys.executable, "-c", _CHILD_SRC, repo_id, *ignore],
+        stdout=open(log_path, "w"), stderr=subprocess.STDOUT,
+        env=dict(os.environ),
+    )
+    cancelled = False
+    try:
+        while proc.poll() is None:
+            if progress.should_cancel():
+                cancelled = True
+                proc.terminate()
+                try:
+                    proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                break
             written = _dir_bytes(blobs_dir) - baseline
-            delta = written - _polled[0]
+            delta = written - polled
             if delta > 0:
                 progress.add_bytes(delta)
-                _polled[0] = written
-
-    poll_thread = threading.Thread(target=_poll, daemon=True, name="dl-poll")
-    poll_thread.start()
-    try:
-        snapshot_download(repo_id)
-        progress.log("Download complete.")
+                polled = written
+            time.sleep(0.5)
     finally:
-        _stop.set()
-        poll_thread.join(timeout=2.0)
+        if proc.poll() is None:
+            proc.kill()
+
+    if cancelled:
+        raise DownloadCancelled()
+    if proc.returncode not in (0, None):
+        tail = ""
+        try:
+            tail = log_path.read_text(encoding="utf-8", errors="replace")[-600:]
+        except OSError:
+            pass
+        raise RuntimeError(f"snapshot_download exited {proc.returncode}. {tail}".strip())
+    progress.log("Download complete.")
+    try:
+        log_path.unlink(missing_ok=True)
+    except OSError:
+        pass

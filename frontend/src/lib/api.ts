@@ -308,6 +308,14 @@ export async function getModelDownloadStatus(name: string): Promise<DownloadStat
   );
 }
 
+export async function cancelModelDownload(name: string): Promise<DownloadStatus> {
+  return jsonOrThrow<DownloadStatus>(
+    await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/download/cancel`, {
+      method: "POST",
+    }),
+  );
+}
+
 export async function startDeleteWeights(name: string): Promise<DeleteWeightsStatus> {
   return jsonOrThrow<DeleteWeightsStatus>(
     await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/delete-weights`, {

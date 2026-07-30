@@ -155,7 +155,7 @@ export interface InstallStatus {
 
 export interface DownloadStatus {
   engine: string | null;
-  state: "idle" | "downloading" | "done" | "error";
+  state: "idle" | "downloading" | "done" | "error" | "cancelling" | "cancelled";
   percent: number | null;
   downloaded_bytes: number;
   total_bytes: number | null;

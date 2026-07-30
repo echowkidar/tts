@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Download, Loader2, X } from "lucide-react";
 import { focusRing } from "@/lib/theme";
-import { getModelDownloadStatus, startModelDownload } from "@/lib/api";
+import { cancelModelDownload, getModelDownloadStatus, startModelDownload } from "@/lib/api";
 import type { DownloadStatus } from "@/types/models";
 
 interface Props {
@@ -16,9 +16,13 @@ interface Props {
 const MODEL_SIZES: Record<string, string> = {
   vibevoice: "~5.4 GB",
   kokoro: "~350 MB",
+  kitten: "~79 MB",
   omnivoice: "~3.3 GB",
   voxcpm: "~5 GB",
   qwen: "~3.5 GB",
+  whisper: "~1.6 GB",
+  m2m100: "~1 GB",
+  m2m100_large: "~5 GB",
 };
 
 const fmtBytes = (b: number): string =>
@@ -79,11 +83,12 @@ export function DownloadModelDialog({
         return;
       }
       setStatus(s);
-      if (s.state === "downloading") {
+      if (s.state === "downloading" || s.state === "cancelling") {
         timerRef.current = window.setTimeout(() => void poll(), 1000);
       } else if (s.state === "done") {
         onDone();
       }
+      // "cancelled" / "error" are terminal — stop polling, let the user close.
     } catch (err) {
       setStatus((prev) => ({
         ...prev,
@@ -121,9 +126,19 @@ export function DownloadModelDialog({
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [status.log]);
 
-  const downloading = status.state === "downloading";
+  const downloading = status.state === "downloading" || status.state === "cancelling";
   const failed = status.state === "error";
+  const cancelled = status.state === "cancelled";
   const pct = status.percent ?? 0;
+
+  const cancelDownload = async () => {
+    setStatus((prev) => ({ ...prev, state: "cancelling" }));
+    try {
+      await cancelModelDownload(engineName);
+    } catch {
+      /* the poll will reflect the real state */
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -148,7 +163,9 @@ export function DownloadModelDialog({
                 ? `Downloading ${displayName}…`
                 : failed
                   ? `${displayName} download failed`
-                  : `Download ${displayName}`}
+                  : cancelled
+                    ? `${displayName} download cancelled`
+                    : `Download ${displayName}`}
             </span>
           </div>
           <button
@@ -227,13 +244,29 @@ export function DownloadModelDialog({
                 {`Download (${sizeLabel})`}
               </button>
             )}
-            {failed && (
+            {(failed || cancelled) && (
               <button
                 type="button"
                 onClick={() => void begin()}
                 className={`px-4 py-2 rounded-lg text-sm font-medium bg-orange-600 hover:bg-orange-500 text-white ${focusRing}`}
               >
                 Retry
+              </button>
+            )}
+            {downloading && (
+              <button
+                type="button"
+                onClick={() => void cancelDownload()}
+                disabled={status.state === "cancelling"}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  status.state === "cancelling"
+                    ? "opacity-40 cursor-not-allowed bg-zinc-700 text-zinc-300"
+                    : isDark
+                      ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
+                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                } ${focusRing}`}
+              >
+                {status.state === "cancelling" ? "Cancelling…" : "Cancel download"}
               </button>
             )}
             <button

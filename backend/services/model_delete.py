@@ -23,7 +23,7 @@ from backend.scripts.download_models import MODEL_CATALOG
 #: its 1.6 GB is reclaimable like any other.
 DELETABLE: frozenset[str] = frozenset(
     {"vibevoice", "kokoro", "kitten", "omnivoice", "chatterbox", "voxcpm", "qwen", "whisper",
-     "m2m100", "madlad"}
+     "m2m100", "m2m100_large"}
 )
 
 _MAX_LOG_LINES = 500
@@ -111,11 +111,11 @@ class ModelDeleter:
         asr_engine = getattr(self._asr, "engine", None)
         if asr_engine is not None and getattr(asr_engine, "name", None) == engine_name:
             return asr_engine
-        if self._translate is not None and engine_name in ("m2m100", "madlad"):
+        if self._translate is not None:
             try:
                 return self._translate.get(engine_name)
             except KeyError:
-                return None
+                pass
         if self._em is not None:
             try:
                 return self._em.get_engine(engine_name)

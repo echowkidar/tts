@@ -168,7 +168,7 @@ def test_catalog_has_expected_engines():
     # but they ride the same weight downloader.
     assert set(dm.MODEL_CATALOG) == {"vibevoice", "kokoro", "kitten", "chatterbox",
                                      "omnivoice", "voxcpm", "qwen", "whisper",
-                                     "m2m100", "madlad"}
+                                     "m2m100", "m2m100_large"}
     assert dm.MODEL_CATALOG["kokoro"]["repo_id"] == "hexgrad/Kokoro-82M"
     assert dm.MODEL_CATALOG["omnivoice"]["repo_id"] == "k2-fsa/OmniVoice"
 

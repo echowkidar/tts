@@ -56,8 +56,3 @@ M2M100_LANGS: list[tuple[str, str]] = [
     ("uz", "Uzbek"), ("vi", "Vietnamese"), ("wo", "Wolof"), ("xh", "Xhosa"),
     ("yi", "Yiddish"), ("yo", "Yoruba"), ("zh", "Chinese"), ("zu", "Zulu"),
 ]
-
-# MADLAD supports 400+; we expose the same major set the M2M list covers so the
-# two pickers feel consistent. MADLAD uses the same ISO codes as its <2xx> tokens
-# for these. (Extend from the model card's token list to widen coverage later.)
-MADLAD_LANGS: list[tuple[str, str]] = list(M2M100_LANGS)
