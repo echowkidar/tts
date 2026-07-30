@@ -229,6 +229,26 @@ class DubRequestBody(BaseModel):
     force_regenerate: bool = False
 
 
+# ---- translate ----
+
+class TranslateSegmentModel(BaseModel):
+    start: float = Field(0, ge=0)
+    end: float = Field(0, ge=0)
+    text: str = ""
+
+
+class TranslateRequestBody(BaseModel):
+    segments: list[TranslateSegmentModel] | None = Field(default=None, max_length=5000)
+    texts: list[str] | None = Field(default=None, max_length=5000)
+    source_lang: str | None = None
+    target_lang: str = Field(min_length=1, max_length=16)
+    model: str | None = None
+
+
+class TranslateActivateBody(BaseModel):
+    name: str = Field(min_length=1, max_length=32)
+
+
 class AsrStatusResponse(BaseModel):
     name: str = "whisper"
     model_id: str
