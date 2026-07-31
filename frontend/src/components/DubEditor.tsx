@@ -44,6 +44,10 @@ interface Props {
 
 const ACCEPT = ".wav,.mp3,.flac,.ogg,.m4a,.webm";
 
+// Popular dubbing targets, shown as one-click chips (filtered to what the active
+// translator actually supports). The source language is auto-detected from audio.
+const POPULAR_TARGET_CODES = ["es", "fr", "de", "pt", "it", "zh", "ja", "ko", "hi", "ur", "ar", "ru"];
+
 export function DubEditor({
   isDark,
   buffer,
@@ -91,6 +95,11 @@ export function DubEditor({
   // clone needs a reference voice; design/auto don't.
   const needsVoice = mode === "clone";
   const canDub = !busy && buffer.segments.length > 0 && (!needsVoice || !!activeVoice);
+
+  // Popular target-language chips, filtered to what the active translator supports.
+  const popularTargets = POPULAR_TARGET_CODES
+    .map((code) => translateLanguages.find((l) => l.code === code))
+    .filter((l): l is (typeof translateLanguages)[number] => !!l);
 
   useEffect(() => {
     if (!busy) return;
@@ -278,14 +287,11 @@ export function DubEditor({
         </div>
 
         {buffer.segments.length > 0 && (
+          <>
+          {/* Dub controls: language, voice mode, generate, players */}
           <div className={`p-4 rounded-xl border ${panel}`}>
             <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-              <h3 className={`text-sm font-semibold ${text}`}>
-                Transcript
-                {buffer.detectedLanguage && (
-                  <span className={`ml-2 font-normal ${subtle}`}>detected: {buffer.detectedLanguage}</span>
-                )}
-              </h3>
+              <h3 className={`text-sm font-semibold ${text}`}>Dub</h3>
               <div className="flex items-center gap-2">
                 <span className={`text-xs ${subtle}`}>
                   {mode === "design" ? (
@@ -322,34 +328,60 @@ export function DubEditor({
               </div>
             </div>
 
-            {/* Target language: same-language by default, or translate before synth */}
-            <div className="mb-3 flex items-center gap-2 flex-wrap">
-              <label className={`text-xs ${subtle}`} htmlFor="dub-target-lang">Language</label>
-              <select
-                id="dub-target-lang"
-                value={buffer.targetLanguage ?? ""}
-                onChange={(e) => onChange({ targetLanguage: e.target.value || null })}
-                className={`rounded-md border px-2 py-1.5 text-sm ${
-                  isDark ? "bg-zinc-950 border-zinc-800 text-zinc-100" : "bg-white border-gray-200 text-gray-900"
-                } ${focusRing}`}
-              >
-                <option value="">Same language (no translation)</option>
-                {translateLanguages.map((l) => (
-                  <option key={l.code} value={l.code}>{l.label}</option>
-                ))}
-              </select>
-              {buffer.targetLanguage && (
-                translatorDownloaded ? (
-                  <span className={`text-xs ${subtle}`}>translating with {activeTranslator}</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => onDownloadWeights(activeTranslator)}
-                    className={`px-2 py-1 rounded text-xs font-medium bg-orange-600 hover:bg-orange-500 text-white ${focusRing}`}
-                  >
-                    Download translation model
-                  </button>
-                )
+            {/* Target language: same-language by default, or translate before synth.
+                Source is auto-detected from the audio. */}
+            <div className="mb-3 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className={`text-xs ${subtle}`} htmlFor="dub-target-lang">Language</label>
+                <select
+                  id="dub-target-lang"
+                  value={buffer.targetLanguage ?? ""}
+                  onChange={(e) => onChange({ targetLanguage: e.target.value || null })}
+                  className={`rounded-md border px-2 py-1.5 text-sm ${
+                    isDark ? "bg-zinc-950 border-zinc-800 text-zinc-100" : "bg-white border-gray-200 text-gray-900"
+                  } ${focusRing}`}
+                >
+                  <option value="">Same language (no translation)</option>
+                  {translateLanguages.map((l) => (
+                    <option key={l.code} value={l.code}>{l.label}</option>
+                  ))}
+                </select>
+                {buffer.targetLanguage && (
+                  translatorDownloaded ? (
+                    <span className={`text-xs ${subtle}`}>translating with {activeTranslator}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onDownloadWeights(activeTranslator)}
+                      className={`px-2 py-1 rounded text-xs font-medium bg-orange-600 hover:bg-orange-500 text-white ${focusRing}`}
+                    >
+                      Download translation model
+                    </button>
+                  )
+                )}
+              </div>
+              {popularTargets.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {popularTargets.map((l) => {
+                    const on = buffer.targetLanguage === l.code;
+                    return (
+                      <button
+                        key={l.code}
+                        type="button"
+                        onClick={() => onChange({ targetLanguage: on ? null : l.code })}
+                        className={`px-2 py-0.5 text-[11px] rounded border transition-colors ${
+                          on
+                            ? "bg-orange-600 border-orange-600 text-white"
+                            : isDark
+                              ? "border-zinc-700 text-zinc-400 hover:border-orange-500 hover:text-orange-300"
+                              : "border-gray-300 text-gray-600 hover:border-orange-500 hover:text-orange-600"
+                        } ${focusRing}`}
+                      >
+                        {l.label}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
@@ -447,29 +479,6 @@ export function DubEditor({
               </div>
             )}
 
-            <ul className="space-y-2">
-              {buffer.segments.map((s, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className={`tabular-nums text-xs pt-2.5 shrink-0 ${subtle}`}>
-                    [{s.start.toFixed(2)}–{s.end.toFixed(2)}]
-                  </span>
-                  <input
-                    value={s.text}
-                    onChange={(e) => editSegment(i, e.target.value)}
-                    spellCheck={false}
-                    dir={textDirection(s.text)}
-                    className={`flex-1 rounded-lg border px-3 py-2 text-sm ${
-                      isRtlText(s.text) ? "text-right" : "text-left"
-                    } ${
-                      isDark
-                        ? "bg-zinc-950 border-zinc-800 text-zinc-100"
-                        : "bg-white border-gray-200 text-gray-900"
-                    } ${focusRing}`}
-                  />
-                </li>
-              ))}
-            </ul>
-
             {dubbedUrl && (
               <div className={`mt-4 rounded-lg border p-3 space-y-3 ${isDark ? "border-zinc-800 bg-zinc-950/40" : "border-gray-200 bg-gray-50"}`}>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -496,6 +505,39 @@ export function DubEditor({
               </div>
             )}
           </div>
+
+          {/* Transcript: editable segment text, kept separate from the controls */}
+          <div className={`p-4 rounded-xl border ${panel}`}>
+            <h3 className={`text-sm font-semibold mb-3 ${text}`}>
+              Transcript
+              {buffer.detectedLanguage && (
+                <span className={`ml-2 font-normal ${subtle}`}>detected: {buffer.detectedLanguage}</span>
+              )}
+            </h3>
+            <ul className="space-y-2">
+              {buffer.segments.map((s, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className={`tabular-nums text-xs pt-2.5 shrink-0 ${subtle}`}>
+                    [{s.start.toFixed(2)}–{s.end.toFixed(2)}]
+                  </span>
+                  <input
+                    value={s.text}
+                    onChange={(e) => editSegment(i, e.target.value)}
+                    spellCheck={false}
+                    dir={textDirection(s.text)}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm ${
+                      isRtlText(s.text) ? "text-right" : "text-left"
+                    } ${
+                      isDark
+                        ? "bg-zinc-950 border-zinc-800 text-zinc-100"
+                        : "bg-white border-gray-200 text-gray-900"
+                    } ${focusRing}`}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+          </>
         )}
       </div>
     </div>
