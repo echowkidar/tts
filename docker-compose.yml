@@ -3,7 +3,6 @@ version: '3.8'
 services:
   voice-studio:
     image: python:3.10-slim
-    container_name: voice-studio
     restart: unless-stopped
     ports:
       - "7860:5173"  # Browser par http://localhost:7860 se Frontend khulega
