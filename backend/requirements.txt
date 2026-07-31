@@ -64,6 +64,11 @@ kittentts @ https://github.com/KittenML/KittenTTS/releases/download/0.8/kittentt
 sentencepiece>=0.1.99
 hf_xet>=1.0
 
+# Argos Translate — offline, in-process translator (the engine LibreTranslate
+# wraps). Pulls ctranslate2 + stanza + sacremoses; language packs install on
+# demand. No isolated venv (verified conflict-free with the main venv).
+argostranslate>=1.9
+
 # Chatterbox Multilingual V3 is NOT installed here. It hard-pins
 # transformers==5.2.0, which conflicts with vibevoice's transformers==4.51.3.
 # It installs into a separate environment (backend/venv-chatterbox) and runs

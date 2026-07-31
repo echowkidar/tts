@@ -54,5 +54,11 @@ class Translator(abc.ABC):
     def needs_source_lang(self) -> bool:
         return False
 
+    def on_demand(self) -> bool:
+        """True when the model fetches assets per-use (Argos language packs)
+        rather than as one downloadable weight — the UI hides the Download
+        button and notes on-demand installation."""
+        return False
+
 
 __all__ = ["Translator", "TranslateRequest", "TranslateResult"]
