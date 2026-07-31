@@ -40,6 +40,8 @@ export interface TranslateModelInfo {
   downloaded: boolean;
   languages: EngineLanguage[];
   needs_source_lang: boolean;
+  /** True for Argos: fetches language packs per-use instead of one weight download. */
+  on_demand: boolean;
 }
 
 export interface TranslateStatus {

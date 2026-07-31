@@ -44,7 +44,14 @@ export function TranslationCard({ isDark, translate, onActivate, onDownload, onD
                 <div className={`text-[11px] ${sub}`}>{m.license} · {m.languages.length} languages</div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                {!m.downloaded ? (
+                {m.on_demand ? (
+                  <>
+                    <span className={`text-[11px] ${sub}`}>offline · installs on demand</span>
+                    {!active && (
+                      <button type="button" className={btn} onClick={() => onActivate(m.name)}>Use</button>
+                    )}
+                  </>
+                ) : !m.downloaded ? (
                   <button type="button" className={btn} onClick={() => onDownload(m.name)}>
                     <span className="flex items-center gap-1"><Download className="w-3.5 h-3.5" /> Download</span>
                   </button>
