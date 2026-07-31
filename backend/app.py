@@ -52,6 +52,7 @@ from .services.join_cache import JoinCache
 from .services.synth_cache import SynthCache
 from .core.asr.whisper_engine import WhisperEngine
 from .core.translate.m2m100_translator import M2M100Translator
+from .core.translate.argos_translator import ArgosTranslator
 from .core.gpu_gate import GpuGate
 from .services.asr_cache import AsrCache
 from .services.synthesize import SynthService
@@ -258,6 +259,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 description="Meta's 100-language translator. Larger, higher quality (MIT).",
                 model_url="https://huggingface.co/facebook/m2m100_1.2B",
             ),
+            "argos": ArgosTranslator(
+                packages_dir=settings.argos_packages_dir, device_request=settings.device),
         },
         default="m2m100",
         gate=gpu_gate,

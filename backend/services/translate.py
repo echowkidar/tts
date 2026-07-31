@@ -99,5 +99,6 @@ class TranslateService:
                 "license": tr.license, "model_url": tr.model_url,
                 "loaded": tr.is_loaded(), "downloaded": tr.downloaded(),
                 "languages": tr.languages(), "needs_source_lang": tr.needs_source_lang(),
+                "on_demand": tr.on_demand(),
             })
         return {"active": self._active, "models": models}

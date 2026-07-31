@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     # `HF_HOME` is also honored as a global override by the
     # huggingface_hub library itself.
     models_dir: Path = BACKEND_ROOT / "models"
+    argos_packages_dir: Path = BACKEND_ROOT / "models" / "argos"
 
     # Limits
     max_text_chars: int = 5000
