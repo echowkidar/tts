@@ -5,8 +5,8 @@ services:
     image: python:3.10-slim
     restart: unless-stopped
     ports:
-      - "7860:5173"  # Browser par http://localhost:7860 se Frontend khulega
-      - "8880:8880"  # Backend API Port
+      - "${PORT:-7860}:5173"  # Portainer Environment Variables se PORT change kar sakte hain (Default: 7860)
+      - "${BACKEND_PORT:-8880}:8880"  # Backend API Port (Default: 8880)
     environment:
       - DEBIAN_FRONTEND=noninteractive
       - PYTHONUNBUFFERED=1
