@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  voice-studio:
+    image: python:3.10-slim
+    container_name: voice-studio
+    restart: unless-stopped
+    ports:
+      - "7860:5173"  # Browser par http://localhost:7860 se Frontend khulega
+      - "8880:8880"  # Backend API Port
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - PYTHONUNBUFFERED=1
+      - HOST=0.0.0.0
+      - VITE_HOST=0.0.0.0
+    volumes:
+      - voice_studio_data:/app
+    working_dir: /app
+    command: >
+      bash -c "
+      echo '=== System Dependencies Install Ho Rahi Hain ===' &&
+      apt-get update && apt-get install -y --no-install-recommends curl git ffmpeg espeak-ng build-essential sed &&
+      curl -fsSL https://deb.nodesource.com/setup_20.x | bash - &&
+      apt-get install -y nodejs &&
+      if [ ! -f studio.py ]; then
+        echo '=== Repository Clone Ho Raha Hai ===' &&
+        git clone https://github.com/MSRBuilds/voice-studio.git .
+      fi &&
+      echo '=== Python Packages Upgrade Ho Rahe Hain ===' &&
+      pip install --no-cache-dir --upgrade pip &&
+      if [ -f requirements.txt ]; then
+        pip install --no-cache-dir -r requirements.txt
+      fi &&
+      echo '=== Non-Interactive Setup Chal Raha Hai ===' &&
+      yes | python studio.py setup &&
+      echo '=== Exposing Frontend Host ===' &&
+      if [ -f frontend/package.json ]; then
+        sed -i 's/\"dev\": \"vite\"/\"dev\": \"vite --host 0.0.0.0\"/g' frontend/package.json ;
+      elif [ -f package.json ]; then
+        sed -i 's/\"dev\": \"vite\"/\"dev\": \"vite --host 0.0.0.0\"/g' package.json ;
+      fi &&
+      export HOST=0.0.0.0 &&
+      echo '=== Voice Studio Start Ho Raha Hai ===' &&
+      python studio.py start
+      "
+
+volumes:
+  voice_studio_data:
