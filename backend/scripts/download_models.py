@@ -123,7 +123,7 @@ def list_catalog() -> list[dict[str, str]]:
 def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(
         prog="download_models",
-        description="Voice Studio by MSR — model downloader",
+        description="Voice Studio by Echowkidar — model downloader",
     )
     p.add_argument(
         "--models",

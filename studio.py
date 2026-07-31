@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Voice Studio by MSR — one-stop setup & launch dispatcher.
+"""Voice Studio by Echowkidar — one-stop setup & launch dispatcher.
 
 Stdlib only: this runs on a bare system Python before the venv exists.
 
@@ -44,7 +44,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from tools import envdetect  # noqa: E402
 
 IS_WINDOWS = os.name == "nt"
-BANNER = "=== Voice Studio by MSR ==="
+BANNER = "=== Voice Studio by Echowkidar ==="
 
 
 # --------------------------------------------------------------- helpers --
@@ -683,7 +683,8 @@ def _run(cmd: list[str], cwd: Path | None = None) -> int:
 
 def remote_is_voice_studio(url: str) -> bool:
     """True if a git remote URL points at the Voice Studio repo (any form)."""
-    return "msrbuilds/voice-studio" in (url or "").lower()
+    u = (url or "").lower()
+    return "echowkidar/tts" in u or "msrbuilds/voice-studio" in u
 
 
 def worktree_is_clean(porcelain: str) -> bool:
@@ -1191,7 +1192,7 @@ def _terminate_all(procs: list[subprocess.Popen]) -> None:
 # ------------------------------------------------------------------ main --
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="studio.py", description="Voice Studio by MSR — setup & launch"
+        prog="studio.py", description="Voice Studio by Echowkidar — setup & launch"
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

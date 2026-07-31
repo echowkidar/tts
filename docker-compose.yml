@@ -24,7 +24,7 @@ services:
       apt-get install -y nodejs &&
       if [ ! -f studio.py ]; then
         echo '=== Repository Clone Ho Raha Hai ===' &&
-        git clone https://github.com/MSRBuilds/voice-studio.git .
+        git clone https://github.com/echowkidar/tts.git .
       fi &&
       echo '=== Python Packages Upgrade Ho Rahe Hain ===' &&
       pip install --no-cache-dir --upgrade pip &&

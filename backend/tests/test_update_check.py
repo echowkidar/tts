@@ -31,7 +31,7 @@ def test_is_newer_prerelease_and_garbage():
 def test_build_snapshot_update_available():
     payload = {
         "tag_name": "v0.3.0",
-        "html_url": "https://github.com/msrbuilds/voice-studio/releases/tag/v0.3.0",
+        "html_url": "https://github.com/echowkidar/tts/releases/tag/v0.3.0",
         "published_at": "2026-07-01T00:00:00Z",
         "body": "Release notes here",
     }

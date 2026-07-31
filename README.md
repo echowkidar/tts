@@ -1,6 +1,6 @@
 <img width="128" height="128" alt="logo-dark-sm" src="https://github.com/user-attachments/assets/ac313f2b-4bba-49aa-b58d-76ee9638fdf0" />
 
-# Voice Studio by MSR
+# Voice Studio by Echowkidar
 
 A local web UI for **multiple open-source TTS models** — switch engines from the UI; only one loads at a time to keep memory low:
 
@@ -72,8 +72,8 @@ Restart the backend after installing so it picks them up on `PATH`.
 ### 1. Clone
 
 ```bash
-git clone https://github.com/msrbuilds/voice-studio.git
-cd voice-studio
+git clone https://github.com/echowkidar/tts.git
+cd tts
 ```
 
 ### 2. Quick setup (recommended)

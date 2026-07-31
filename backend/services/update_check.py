@@ -20,7 +20,7 @@ from typing import Callable, Optional
 
 log = logging.getLogger(__name__)
 
-_REPO = "msrbuilds/voice-studio"
+_REPO = "echowkidar/tts"
 _API_URL = f"https://api.github.com/repos/{_REPO}/releases/latest"
 _TIMEOUT_SEC = 8
 # Re-check at most this often unless force=True (avoids hammering the API).

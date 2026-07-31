@@ -27,14 +27,14 @@ export function BrandFooter({ isDark }: Props) {
       <span className="text-xs">
         Voice Studio by{" "}
         <a
-          href="https://github.com/msrbuilds"
+          href="https://github.com/echowkidar"
           target="_blank"
           rel="noopener noreferrer"
           className={`font-medium underline decoration-dotted underline-offset-2 transition-colors ${
             isDark ? "hover:text-orange-400" : "hover:text-orange-600"
           } ${focusRing}`}
         >
-          MSR Builds
+          Echowkidar
         </a>
       </span>
     </footer>

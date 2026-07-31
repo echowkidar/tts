@@ -42,7 +42,7 @@ export function SidebarHeader({ isDark, version, onCollapse, collapseTitle }: He
         />
         <div className="min-w-0 flex-1">
           <h1 className={`font-semibold text-sm truncate ${isDark ? "text-white" : "text-gray-900"}`}>
-            Voice Studio by MSR
+            Voice Studio by Echowkidar
           </h1>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className={`text-xs tabular-nums ${heading}`}>v{version ?? "—"}</span>

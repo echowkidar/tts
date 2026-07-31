@@ -42,7 +42,7 @@ log = logging.getLogger(__name__)
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="voice-studio",
-        description="Voice Studio by MSR — local multi-engine TTS server",
+        description="Voice Studio by Echowkidar — local multi-engine TTS server",
     )
     p.add_argument(
         "--engine",

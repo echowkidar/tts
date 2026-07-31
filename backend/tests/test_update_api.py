@@ -17,7 +17,7 @@ def _client_with_fake_release(tag: str) -> TestClient:
         current="0.2.0",
         fetcher=lambda: {
             "tag_name": tag,
-            "html_url": f"https://github.com/msrbuilds/voice-studio/releases/tag/{tag}",
+            "html_url": f"https://github.com/echowkidar/tts/releases/tag/{tag}",
             "published_at": "2026-07-01T00:00:00Z",
             "body": "notes",
         },

@@ -386,6 +386,7 @@ def test_detect_qwen_cuda_tag_uses_runner():
 
 def test_remote_is_voice_studio():
     import studio
+    assert studio.remote_is_voice_studio("https://github.com/echowkidar/tts.git")
     assert studio.remote_is_voice_studio("https://github.com/msrbuilds/voice-studio.git")
     assert studio.remote_is_voice_studio("git@github.com:msrbuilds/voice-studio.git")
     assert not studio.remote_is_voice_studio("https://github.com/someoneelse/other.git")

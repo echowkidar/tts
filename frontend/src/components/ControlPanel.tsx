@@ -24,11 +24,7 @@ function XIcon({ className }: { className?: string }) {
 }
 
 const SOCIAL_LINKS = [
-  { label: "GitHub", href: "https://github.com/msrbuilds", Icon: Github },
-  { label: "X (Twitter)", href: "https://x.com/MSR_Builds", Icon: XIcon },
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/mian-shahzad-raza/", Icon: Linkedin },
-  { label: "YouTube", href: "https://www.youtube.com/@WPAcademyPK", Icon: Youtube },
-  { label: "Website", href: "https://msrbuilds.com/", Icon: Globe },
+  { label: "GitHub", href: "https://github.com/echowkidar", Icon: Github },
 ] as const;
 
 interface Props {
@@ -328,14 +324,14 @@ export function ControlPanel({
           <p className={`mt-1 text-[11px] ${isDark ? "text-zinc-500" : "text-gray-500"}`}>
             Built by{" "}
             <a
-              href="https://msrbuilds.com/"
+              href="https://github.com/echowkidar"
               target="_blank"
               rel="noreferrer noopener"
               className={`font-medium ${
                 isDark ? "text-zinc-300 hover:text-orange-400" : "text-gray-700 hover:text-orange-600"
               } ${focusRing}`}
             >
-              Mian Shahzad Raza (MSR)
+              Echowkidar
             </a>
           </p>
           <div className={`mt-2.5 pt-2.5 flex items-center gap-1 border-t ${

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Voice Studio by MSR — a fully-offline, local web UI for **multiple open-source TTS engines** (VibeVoice-1.5B, Kokoro-82M, Kitten TTS Mini, Chatterbox Multilingual V3, OmniVoice, VoxCPM2, Qwen3-TTS CustomVoice) plus Whisper speech-to-text. FastAPI backend serves the models; React + Vite frontend is a multi-segment podcast editor. Only one engine is loaded at a time to keep memory low.
+Voice Studio by Echowkidar — a fully-offline, local web UI for **multiple open-source TTS engines** (VibeVoice-1.5B, Kokoro-82M, Kitten TTS Mini, Chatterbox Multilingual V3, OmniVoice, VoxCPM2, Qwen3-TTS CustomVoice) plus Whisper speech-to-text. FastAPI backend serves the models; React + Vite frontend is a multi-segment podcast editor. Only one engine is loaded at a time to keep memory low.
 
 ## Commands
 
