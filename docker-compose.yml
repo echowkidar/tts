@@ -5,6 +5,10 @@ services:
     build: .
     restart: unless-stopped
 
+    networks:
+      - default
+      - proxy
+
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -30,3 +34,7 @@ volumes:
   voice_studio_uploads:
   voice_studio_voices:
   voice_studio_cache:
+
+networks:
+  proxy:
+    external: true
