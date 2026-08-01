@@ -13,24 +13,36 @@ SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "echowkidar_secret_key_change_in_p
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 
+import hashlib
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+def _prepare_password(password: str) -> str:
+    """Pre-hash password with SHA-256 to guarantee fixed 64-char length (always < 72 bytes)."""
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
 def hash_password(password: str) -> str:
-    """Hash password using bcrypt (truncating to 72 bytes max for bcrypt compatibility)."""
-    truncated = password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
-    return pwd_context.hash(truncated)
+    """Hash password using SHA256 pre-hashing + bcrypt."""
+    prep = _prepare_password(password)
+    return pwd_context.hash(prep)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify plain password against hashed password."""
+    """Verify plain password against hashed password with fallback to direct check."""
     if not hashed_password:
         return False
     try:
-        truncated = plain_password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
-        return pwd_context.verify(truncated, hashed_password)
+        prep = _prepare_password(plain_password)
+        return pwd_context.verify(prep, hashed_password)
     except Exception:
-        return False
+        try:
+            # Fallback for plain passwords hashed prior to pre-hashing
+            truncated = plain_password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
+            return pwd_context.verify(truncated, hashed_password)
+        except Exception:
+            return False
 
 
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
