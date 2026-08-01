@@ -94,6 +94,12 @@ models/
 *.pem
 secrets/
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+backend/database.db
+
 # --- Logs / temp / scratch ---
 *.log
 *.tmp
