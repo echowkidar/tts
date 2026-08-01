@@ -157,6 +157,12 @@ export default function App() {
   const isFilterLangEngine = activeEngine === "kokoro";
   const isSynthLangEngine = engineLanguages.length > 0 && !isFilterLangEngine;
 
+  useEffect(() => {
+    if (!auth.loading && !auth.isLoggedIn) {
+      setAuthModalOpen(true);
+    }
+  }, [auth.loading, auth.isLoggedIn]);
+
   // The sidebar's Backend panel (device/dtype/sample-rate) comes from
   // /api/config, which reports the ACTIVE engine's runtime values. useConfig
   // only fetches at mount, so refetch whenever the active engine changes to
@@ -323,6 +329,11 @@ export default function App() {
 
   const generateFor = useCallback(
     async (segmentId: string, options: { forceRegenerate?: boolean } = {}) => {
+      if (!auth.isLoggedIn) {
+        setAuthModalOpen(true);
+        showError("Please sign in or create a free account to generate speech.", "Sign In Required");
+        return;
+      }
       const seg = project.segments.find((s) => s.id === segmentId);
       if (!seg || !seg.text.trim()) return;
       const speaker = project.speakers.find((s) => s.id === seg.speakerId);
@@ -555,6 +566,11 @@ export default function App() {
   // ---- TTS mode generation ----
 
   const generateTts = useCallback(async () => {
+    if (!auth.isLoggedIn) {
+      setAuthModalOpen(true);
+      showError("Please sign in or create a free account to generate speech.", "Sign In Required");
+      return;
+    }
     if (!pm.tts.text.trim()) return;
     const isOmni = supportsVoiceModes;
     const voice = displayedVoices.find((v) => v.id === pm.tts.voiceId) ?? null;
