@@ -33,6 +33,8 @@ interface Props {
   onGenerate: () => void;
   onPlay: () => void;
   onDownload: () => void;
+  limitReached?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 export function TtsEditor(props: Props) {
@@ -40,7 +42,7 @@ export function TtsEditor(props: Props) {
     isDark, text, onTextChange, activeVoice, languages, showLanguage,
     language, onLanguageChange, supportsVoiceModes, supportsStyleClone, supportsStylePrompt = false, activeEngine, omniMode, onOmniModeChange,
     voiceDesign, onVoiceDesignChange, busy, isGenerating, isPlaying, hasAudio,
-    onGenerate, onPlay, onDownload,
+    onGenerate, onPlay, onDownload, limitReached, onUpgradeClick,
   } = props;
   const stats = textStats(text);
   const inputBg = isDark ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-gray-200 text-gray-900";
@@ -224,10 +226,20 @@ export function TtsEditor(props: Props) {
               Voice: <span className="text-orange-400">{activeVoice ? activeVoice.name : "none selected"}</span>
             </span>
           )}
-          <button type="button" onClick={onGenerate} disabled={busy || !text.trim()}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-white transition-colors ${focusRing}`}>
-            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Generate
-          </button>
+          {limitReached ? (
+            <div className="flex flex-col items-end gap-1">
+              <button type="button" onClick={onUpgradeClick}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-red-600 hover:bg-red-500 text-white transition-colors ${focusRing}`}>
+                Limit Reached (Upgrade)
+              </button>
+              <span className="text-[10px] text-red-400 font-medium whitespace-nowrap">Resets at midnight</span>
+            </div>
+          ) : (
+            <button type="button" onClick={onGenerate} disabled={busy || !text.trim()}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-white transition-colors ${focusRing}`}>
+              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Generate
+            </button>
+          )}
           <button type="button" onClick={onPlay} disabled={busy && !isPlaying}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
               isPlaying

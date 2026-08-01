@@ -146,6 +146,8 @@ export default function App() {
   const requireLogin = !auth.loading && !auth.isLoggedIn;
   const hasAcked = auth.user?.id ? !!ackedPlans[auth.user.id] : false;
   const requireSub = !auth.loading && auth.isLoggedIn && !sub.loading && !hasAcked;
+  
+  const limitReached = sub.usage?.daily_limit !== -1 && (sub.usage?.chars_remaining ?? 1) <= 0;
 
   const isNewUser = useMemo(() => {
     if (!auth.user || !auth.user.created_at) return false;
@@ -1095,6 +1097,8 @@ export default function App() {
               onGenerate={() => void generateTts()}
               onPlay={() => void playTts()}
               onDownload={downloadTts}
+              limitReached={limitReached}
+              onUpgradeClick={() => setSubModalOpen(true)}
             />
           </div>
         ) : (
@@ -1174,6 +1178,8 @@ export default function App() {
                       onPlay={() => handlePlay(segment.id)}
                       onStop={handleStop}
                       onDownload={() => handleDownloadSegment(segment.id)}
+                      limitReached={limitReached}
+                      onUpgradeClick={() => setSubModalOpen(true)}
                     />
                   );
                 })}

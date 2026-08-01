@@ -22,6 +22,8 @@ interface Props {
   onPlay: () => void;
   onStop: () => void;
   onDownload: () => void;
+  limitReached?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 export function SegmentCard({
@@ -42,6 +44,8 @@ export function SegmentCard({
   onPlay,
   onStop,
   onDownload,
+  limitReached,
+  onUpgradeClick,
 }: Props) {
   const isActive = isPlaying || isGenerating;
   const isDark = theme === "dark";
@@ -165,24 +169,39 @@ export function SegmentCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={isCached ? onRegenerate : onGenerate}
-          disabled={!segment.text.trim() || busy}
-          className={`mt-5 flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg font-medium transition-colors disabled:cursor-not-allowed ${
-            isCached
-              ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
-              : "bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-700 text-white disabled:text-zinc-400"
-          } ${focusRing}`}
-          title={isCached ? "Force a fresh take (bypass cache)" : "Generate audio for this segment"}
-        >
-          {isGenerating ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
-          )}
-          {isCached ? "Regenerate" : "Generate"}
-        </button>
+        {limitReached ? (
+          <div className="mt-5 flex flex-col items-end gap-1">
+            <button
+              type="button"
+              onClick={onUpgradeClick}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg font-medium bg-red-600 hover:bg-red-500 text-white transition-colors ${focusRing}`}
+            >
+              Limit Reached (Upgrade)
+            </button>
+            <span className="text-[10px] text-red-400 font-medium whitespace-nowrap">Resets at midnight</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={isCached ? onRegenerate : onGenerate}
+            disabled={!segment.text.trim() || busy}
+            className={`mt-5 flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg font-medium transition-colors disabled:cursor-not-allowed ${
+              isCached
+                ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
+                : "bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-700 text-white disabled:text-zinc-400"
+            } ${focusRing}`}
+            title={isCached ? "Force a fresh take (bypass cache)" : "Generate audio for this segment"}
+          >
+            {isGenerating ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isCached ? (
+              <RefreshCw className="w-4 h-4" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            {isCached ? "Regenerate" : "Generate"}
+          </button>
+        )}
 
         {isPlaying ? (
           <button
