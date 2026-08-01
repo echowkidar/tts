@@ -20,8 +20,15 @@ import type {
   Voice,
 } from "@/types/models";
 
+import { getAuthToken } from "./auth";
+
 const API_BASE =
   (import.meta.env.VITE_API_BASE as string | undefined) ?? "/api";
+
+function getAuthHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 async function jsonOrThrow<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -88,7 +95,11 @@ export async function transcribe(args: TranscribeArgs): Promise<AsrTranscribeRes
   if (args.language) form.append("language", args.language);
   form.append("timestamps", String(!!args.timestamps));
 
-  const res = await fetch(`${API_BASE}/asr/transcribe`, { method: "POST", body: form });
+  const res = await fetch(`${API_BASE}/asr/transcribe`, { 
+    method: "POST", 
+    headers: getAuthHeaders(),
+    body: form 
+  });
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -155,7 +166,7 @@ export async function translateSegments(args: {
 }): Promise<{ segments: TranslateSegment[]; source_lang: string; target_lang: string }> {
   return jsonOrThrow(await fetch(`${API_BASE}/translate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify(args),
   }));
 }
@@ -166,7 +177,7 @@ export async function dub(
 ): Promise<{ audio: ArrayBuffer; sampleRate: number; cacheHash: string | null }> {
   const res = await fetch(`${API_BASE}/dub`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify(args),
   });
   if (!res.ok) {
@@ -372,7 +383,7 @@ export async function uploadVoice(
   if (meta.gender) fd.append("gender", meta.gender);
   if (meta.language) fd.append("language", meta.language);
   return jsonOrThrow<UploadVoiceResponse>(
-    await fetch(`${API_BASE}/voices/upload`, { method: "POST", body: fd }),
+    await fetch(`${API_BASE}/voices/upload`, { method: "POST", headers: getAuthHeaders(), body: fd }),
   );
 }
 
@@ -405,6 +416,7 @@ export async function editBuiltInVoice(
 export async function deleteVoice(voiceId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/voices/${encodeURIComponent(voiceId)}`, {
     method: "DELETE",
+    headers: getAuthHeaders(),
   });
   if (!res.ok && res.status !== 204) {
     await jsonOrThrow(res); // throws ApiError
@@ -440,7 +452,7 @@ export async function synthesizeWav(
 ): Promise<{ audioData: ArrayBuffer; sampleRate: number; durationSec: number; inferenceMs: number; cacheHit: boolean; cacheHash: string | null }> {
   const res = await fetch(`${API_BASE}/synthesize`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify({
       text,
       speakers,
