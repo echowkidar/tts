@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Mail, Lock, User as UserIcon, LogIn, UserPlus, Sparkles, AlertCircle } from "lucide-react";
 import { focusRing } from "@/lib/theme";
 
@@ -11,15 +11,13 @@ interface Props {
   isDark: boolean;
 }
 
-export function AuthModal({ isOpen, onClose, onLogin, onRegister, isDark }: Props) {
+export function AuthModal({ isOpen, onClose, onLogin, onRegister, onGoogleLogin, isDark }: Props) {
   const [tab, setTab] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -66,7 +64,9 @@ export function AuthModal({ isOpen, onClose, onLogin, onRegister, isDark }: Prop
 
     const timer = setTimeout(initGoogleBtn, 300);
     return () => clearTimeout(timer);
-  }, [isOpen, isDark]);
+  }, [isOpen, isDark, onGoogleLogin]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
