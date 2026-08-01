@@ -72,6 +72,19 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function extractErrorMessage(err: any, fallback: string): string {
+  if (!err) return fallback;
+  if (typeof err.detail === "string") return err.detail;
+  if (Array.isArray(err.detail)) {
+    return err.detail.map((e: any) => e.msg || e.message || JSON.stringify(e)).join(", ");
+  }
+  if (typeof err.detail === "object" && err.detail !== null) {
+    return err.detail.msg || err.detail.message || JSON.stringify(err.detail);
+  }
+  if (typeof err.message === "string") return err.message;
+  return fallback;
+}
+
 export async function fetchMe(): Promise<User | null> {
   const token = getAuthToken();
   if (!token) return null;
@@ -95,7 +108,7 @@ export async function loginEmail(email: string, password: string): Promise<Token
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.detail || "Invalid email or password");
+    throw new Error(extractErrorMessage(err, "Invalid email or password"));
   }
   const data: TokenResponse = await res.json();
   setAuthToken(data.access_token);
@@ -110,7 +123,7 @@ export async function registerEmail(email: string, password: string, full_name?:
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.detail || "Failed to register account");
+    throw new Error(extractErrorMessage(err, "Failed to register account"));
   }
   const data: TokenResponse = await res.json();
   setAuthToken(data.access_token);
@@ -125,7 +138,7 @@ export async function loginGoogleToken(googleToken: string): Promise<TokenRespon
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.detail || "Google authentication failed");
+    throw new Error(extractErrorMessage(err, "Google authentication failed"));
   }
   const data: TokenResponse = await res.json();
   setAuthToken(data.access_token);
@@ -162,7 +175,7 @@ export async function submitPaymentUTR(plan_tier: string, amount_inr: number, ut
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.detail || "Failed to submit transaction UTR");
+    throw new Error(extractErrorMessage(err, "Failed to submit transaction UTR"));
   }
   return await res.json();
 }
@@ -181,7 +194,7 @@ export async function approveAdminPayment(payment_id: number, action: "approve" 
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.detail || "Failed to process payment approval");
+    throw new Error(extractErrorMessage(err, "Failed to process payment approval"));
   }
   return await res.json();
 }
