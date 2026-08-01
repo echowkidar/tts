@@ -67,7 +67,12 @@ def _norm_device(device: str | None) -> str:
         # instead of forcing cuda and crashing.
         try:
             import torch
-            d = "cuda" if torch.cuda.is_available() else "cpu"
+            if torch.cuda.is_available():
+                # Force PyTorch to initialize CUDA to catch "Found no NVIDIA driver"
+                _ = torch.cuda.device_count()
+                d = "cuda"
+            else:
+                d = "cpu"
         except Exception:  # noqa: BLE001
             d = "cpu"
     if d == "cuda":
@@ -101,7 +106,16 @@ class _Worker:
         try:
             self._model = OmniVoice.from_pretrained(model_id, device_map=device)
         except Exception as exc:  # noqa: BLE001
-            return {"ok": False, "error": f"load failed: {exc}"}
+            # Fallback to CPU if CUDA initialization fails (e.g. missing driver)
+            if "cuda" in device and ("NVIDIA driver" in str(exc) or "CUDA" in str(exc)):
+                _log(f"[omnivoice-worker] load failed on {device} ({exc}), retrying on cpu")
+                device = "cpu"
+                try:
+                    self._model = OmniVoice.from_pretrained(model_id, device_map=device)
+                except Exception as exc2:
+                    return {"ok": False, "error": f"load failed on cpu fallback: {exc2}"}
+            else:
+                return {"ok": False, "error": f"load failed: {exc}"}
         _log(f"[omnivoice-worker] model loaded on {device}")
         return {"ok": True, "device": device}
 
