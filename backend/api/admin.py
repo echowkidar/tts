@@ -70,13 +70,14 @@ async def list_all_users(
     result = await db.execute(stmt)
     users = result.scalars().all()
 
+    needs_commit = False
     user_list = []
     for u in users:
         # Auto-clean if non-admin email was stored as admin
         if u.email != "admin@echowkidar.com" and not u.email.startswith("admin@") and u.is_admin:
             u.is_admin = False
             u.role = "user"
-            await db.commit()
+            needs_commit = True
 
         sub_res = await db.execute(select(Subscription).where(Subscription.user_id == u.id))
         sub = sub_res.scalar_one_or_none()
@@ -92,6 +93,10 @@ async def list_all_users(
                 "daily_char_limit": sub.daily_char_limit if sub else 5000,
             }
         )
+
+    if needs_commit:
+        await db.commit()
+
     return user_list
 
 

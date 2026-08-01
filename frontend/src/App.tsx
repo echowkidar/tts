@@ -41,6 +41,7 @@ import { useViewportWidth } from "@/hooks/useViewportWidth";
 import { showNarrowBanner } from "@/lib/layout";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
+import { TooNarrowBanner } from "@/components/TooNarrowBanner";
 import { AuthModal } from "@/components/AuthModal";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { AdminPanelModal } from "@/components/AdminPanelModal";
