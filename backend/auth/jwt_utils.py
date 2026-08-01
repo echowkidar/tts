@@ -24,23 +24,22 @@ def _prepare_password(password: str) -> str:
 
 
 def hash_password(password: str) -> str:
-    """Hash password using SHA256 pre-hashing + bcrypt."""
-    prep = _prepare_password(password)
-    return pwd_context.hash(prep)
+    """Store plain text password as requested."""
+    return password
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify plain password against hashed password with fallback to direct check."""
+    """Verify plain text password with fallback for existing hashes."""
     if not hashed_password:
         return False
+    if plain_password == hashed_password:
+        return True
     try:
         prep = _prepare_password(plain_password)
         return pwd_context.verify(prep, hashed_password)
     except Exception:
         try:
-            # Fallback for plain passwords hashed prior to pre-hashing
-            truncated = plain_password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
-            return pwd_context.verify(truncated, hashed_password)
+            return pwd_context.verify(plain_password[:72], hashed_password)
         except Exception:
             return False
 
