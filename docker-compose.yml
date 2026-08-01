@@ -2,7 +2,8 @@ version: '3.8'
 
 services:
   voice-studio:
-    build: .
+    image: python:3.10-slim
+    container_name: voice-studio
     restart: unless-stopped
 
     networks:
@@ -24,16 +25,74 @@ services:
       VITE_HOST: 0.0.0.0
 
     volumes:
-      - voice_studio_data:/app/backend/models
-      - voice_studio_uploads:/app/backend/uploads
-      - voice_studio_voices:/app/backend/voices
-      - voice_studio_cache:/app/backend/cache
+      - voice_studio_data:/app
+
+    working_dir: /app
+
+    command: >
+      bash -c '
+      echo "================================================";
+      echo "Installing System Packages";
+      echo "================================================";
+
+      for i in 1 2 3 4 5; do
+        apt-get update && break || sleep 3;
+      done;
+
+      apt-get install -y --no-install-recommends curl git ffmpeg espeak-ng build-essential sed ca-certificates;
+
+      curl -fsSL https://deb.nodesource.com/setup_20.x | bash -;
+
+      apt-get install -y nodejs;
+
+      echo "================================================";
+      echo "Fetching Latest Source";
+      echo "================================================";
+
+      if [ ! -d /app/.git ]; then
+          rm -rf /app/*
+          git clone https://github.com/echowkidar/tts.git /app
+      else
+          cd /app
+          git fetch origin
+          git reset --hard origin/main
+      fi;
+
+      echo "================================================";
+      echo "Installing Python Packages";
+      echo "================================================";
+
+      python -m pip install --upgrade pip;
+
+      if [ -f requirements.txt ]; then
+          pip install --no-cache-dir -r requirements.txt;
+      fi;
+
+      echo "================================================";
+      echo "Installing Frontend Packages";
+      echo "================================================";
+
+      if [ -d frontend ]; then
+          cd frontend
+          npm install
+          cd ..
+      fi;
+
+      echo "================================================";
+      echo "Running Setup";
+      echo "================================================";
+
+      yes | python studio.py setup
+
+      echo "================================================";
+      echo "Starting Voice Studio";
+      echo "================================================";
+
+      exec python studio.py start
+      '
 
 volumes:
   voice_studio_data:
-  voice_studio_uploads:
-  voice_studio_voices:
-  voice_studio_cache:
 
 networks:
   proxy:
