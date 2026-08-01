@@ -105,7 +105,9 @@ export function AuthModal({ isOpen, onClose, onLogin, onRegister, isDark }: Prop
             disabled={loading}
             onClick={() => {
               setError(null);
-              const gClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || "";
+              const gClientId =
+                (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
+                "51193166575-n2fvtsruk2lejtvjt6hckjg56rtd2ttf.apps.googleusercontent.com";
               if (window.google?.accounts?.id && gClientId) {
                 setLoading(true);
                 try {

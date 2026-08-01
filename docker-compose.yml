@@ -23,6 +23,9 @@ services:
       PYTHONUNBUFFERED: "1"
       HOST: 0.0.0.0
       VITE_HOST: 0.0.0.0
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-51193166575-n2fvtsruk2lejtvjt6hckjg56rtd2ttf.apps.googleusercontent.com}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-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}"
+      VITE_GOOGLE_CLIENT_ID: "${VITE_GOOGLE_CLIENT_ID:-51193166575-n2fvtsruk2lejtvjt6hckjg56rtd2ttf.apps.googleusercontent.com}"
 
     volumes:
       - voice_studio_data:/app
