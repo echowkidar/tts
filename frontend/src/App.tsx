@@ -132,6 +132,38 @@ export default function App() {
   const [subModalOpen, setSubModalOpen] = useState(false);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [ackedPlans, setAckedPlans] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (auth.user?.id) {
+      try {
+        const val = localStorage.getItem(`vs.plan_acked_${auth.user.id}`) === "true";
+        setAckedPlans((prev) => ({ ...prev, [auth.user!.id]: val }));
+      } catch {}
+    }
+  }, [auth.user?.id]);
+
+  const requireLogin = !auth.loading && !auth.isLoggedIn;
+  const hasAcked = auth.user?.id ? !!ackedPlans[auth.user.id] : false;
+  const requireSub = !auth.loading && auth.isLoggedIn && !sub.loading && !hasAcked;
+
+  useEffect(() => {
+    if (requireLogin) {
+      setAuthModalOpen(true);
+    } else if (requireSub) {
+      setSubModalOpen(true);
+    }
+  }, [requireLogin, requireSub]);
+
+  const handleSubAck = useCallback(() => {
+    if (auth.user?.id) {
+      try {
+        localStorage.setItem(`vs.plan_acked_${auth.user.id}`, "true");
+        setAckedPlans((prev) => ({ ...prev, [auth.user!.id]: true }));
+      } catch {}
+      setSubModalOpen(false);
+    }
+  }, [auth.user?.id]);
 
   const project = useProject();
   const { config, loading: configLoading, error: configError, refresh: refreshConfig } = useConfig();
@@ -159,12 +191,6 @@ export default function App() {
   // the model — its voices are language-agnostic and must not be filtered.
   const isFilterLangEngine = activeEngine === "kokoro";
   const isSynthLangEngine = engineLanguages.length > 0 && !isFilterLangEngine;
-
-  useEffect(() => {
-    if (!auth.loading && !auth.isLoggedIn) {
-      setAuthModalOpen(true);
-    }
-  }, [auth.loading, auth.isLoggedIn]);
 
   // The sidebar's Backend panel (device/dtype/sample-rate) comes from
   // /api/config, which reports the ACTIVE engine's runtime values. useConfig
@@ -1301,6 +1327,7 @@ export default function App() {
         onRegister={auth.register}
         onGoogleLogin={auth.googleLogin}
         isDark={isDark}
+        closable={!requireLogin}
       />
       <SubscriptionModal
         isOpen={subModalOpen}
@@ -1310,6 +1337,8 @@ export default function App() {
         usage={sub.usage}
         onSubmitUTR={sub.submitUTR}
         isDark={isDark}
+        closable={!requireSub}
+        onAcknowledge={handleSubAck}
       />
       <AdminPanelModal
         isOpen={adminModalOpen}

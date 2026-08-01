@@ -9,9 +9,10 @@ interface Props {
   onRegister: (email: string, pass: string, name?: string) => Promise<any>;
   onGoogleLogin?: (token: string) => Promise<any>;
   isDark: boolean;
+  closable?: boolean;
 }
 
-export function AuthModal({ isOpen, onClose, onLogin, onRegister, onGoogleLogin, isDark }: Props) {
+export function AuthModal({ isOpen, onClose, onLogin, onRegister, onGoogleLogin, isDark, closable = true }: Props) {
   const [tab, setTab] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -107,12 +108,14 @@ export function AuthModal({ isOpen, onClose, onLogin, onRegister, onGoogleLogin,
               {tab === "login" ? "Sign in to access your TTS credits & models" : "Create an account to start generating TTS audio"}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className={`p-1.5 rounded-lg transition-colors ${isDark ? "hover:bg-zinc-800 text-zinc-400" : "hover:bg-gray-100 text-gray-500"}`}
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {closable && (
+            <button
+              onClick={onClose}
+              className={`p-1.5 rounded-lg transition-colors ${isDark ? "hover:bg-zinc-800 text-zinc-400" : "hover:bg-gray-100 text-gray-500"}`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Tabs */}

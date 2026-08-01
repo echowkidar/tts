@@ -11,6 +11,8 @@ interface Props {
   usage: UsageInfo | null;
   onSubmitUTR: (planTier: string, amountInr: number, utrNumber: string) => Promise<any>;
   isDark: boolean;
+  closable?: boolean;
+  onAcknowledge?: () => void;
 }
 
 export function SubscriptionModal({
@@ -21,6 +23,8 @@ export function SubscriptionModal({
   usage,
   onSubmitUTR,
   isDark,
+  closable = true,
+  onAcknowledge,
 }: Props) {
   const [selectedPlan, setSelectedPlan] = useState<PlanInfo | null>(null);
   const [utrNumber, setUtrNumber] = useState("");
@@ -76,12 +80,14 @@ export function SubscriptionModal({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-xl transition-colors ${isDark ? "hover:bg-zinc-800 text-zinc-400" : "hover:bg-gray-100 text-gray-500"}`}
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {closable && (
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-xl transition-colors ${isDark ? "hover:bg-zinc-800 text-zinc-400" : "hover:bg-gray-100 text-gray-500"}`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Current Usage Status Bar */}
@@ -145,26 +151,32 @@ export function SubscriptionModal({
 
                       <div className="mt-4 pt-4 border-t border-zinc-800/60 space-y-2">
                         {p.features.map((f, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-xs text-zinc-300">
-                            <Check className="w-4 h-4 text-orange-400 shrink-0" />
-                            <span>{f}</span>
-                          </div>
+                           <div key={idx} className="flex items-center gap-2 text-xs text-zinc-300">
+                             <Check className="w-4 h-4 text-orange-400 shrink-0" />
+                             <span>{f}</span>
+                           </div>
                         ))}
                       </div>
                     </div>
 
                     <button
-                      disabled={isCurrent}
-                      onClick={() => handlePayClick(p)}
+                      disabled={isCurrent && closable}
+                      onClick={() => {
+                        if (isCurrent && !closable) {
+                          if (onAcknowledge) onAcknowledge();
+                        } else {
+                          handlePayClick(p);
+                        }
+                      }}
                       className={`mt-6 w-full py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-                        isCurrent
+                        isCurrent && closable
                           ? "bg-zinc-800 text-zinc-500 cursor-default"
-                          : isPro
+                          : isPro || (isCurrent && !closable)
                           ? "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20"
                           : "bg-zinc-800 hover:bg-zinc-700 text-white"
                       }`}
                     >
-                      {isCurrent ? "Current Active Plan" : p.price_inr === 0 ? "Default Plan" : "Upgrade via UPI QR"}
+                      {isCurrent ? (closable ? "Current Active Plan" : "Continue with " + p.name) : p.price_inr === 0 ? "Default Plan" : "Upgrade via UPI QR"}
                     </button>
                   </div>
                 );
@@ -255,7 +267,10 @@ export function SubscriptionModal({
                       Your UTR Reference (<strong>{utrNumber}</strong>) has been submitted for verification. Admin will approve your subscription within minutes.
                     </p>
                     <button
-                      onClick={onClose}
+                      onClick={() => {
+                        if (!closable && onAcknowledge) onAcknowledge();
+                        else onClose();
+                      }}
                       className="mt-4 px-6 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold"
                     >
                       Done & Close
