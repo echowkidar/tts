@@ -30,9 +30,11 @@ from .deps import get_current_user
 
 router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
 
+import os
+
 # Configure default UPI details for QR Code generation (Can be overridden via env vars)
-UPI_ID = "echowkidar@upi"
-UPI_NAME = "Voice Studio by Echowkidar"
+UPI_ID = os.environ.get("UPI_ID", "8430478128@axl")
+UPI_NAME = os.environ.get("UPI_NAME", "Voice Studio by echowkidar.com")
 
 
 @router.get("/plans", response_model=List[PlanInfo])
