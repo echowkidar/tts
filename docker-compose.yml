@@ -12,43 +12,86 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+
     ports:
-      - "${PORT:-7865}:5173"  # Portainer Environment Variables se PORT change kar sakte hain (Default: 7865)
-      - "${BACKEND_PORT:-8885}:8880"  # Backend API Port (Default: 8885)
+      - "${PORT:-7865}:5173"
+      - "${BACKEND_PORT:-8885}:8880"
+
     environment:
-      - DEBIAN_FRONTEND=noninteractive
-      - PYTHONUNBUFFERED=1
-      - HOST=0.0.0.0
-      - VITE_HOST=0.0.0.0
+      DEBIAN_FRONTEND: noninteractive
+      PYTHONUNBUFFERED: "1"
+      HOST: 0.0.0.0
+      VITE_HOST: 0.0.0.0
+
     volumes:
       - voice_studio_data:/app
+
     working_dir: /app
+
     command: >
       bash -c "
-      echo '=== System Dependencies Install Ho Rahi Hain ===' &&
-      for i in {1..5}; do apt-get update && break || sleep 3; done &&
-      apt-get install -y --no-install-recommends curl git ffmpeg espeak-ng build-essential sed &&
-      curl -fsSL https://deb.nodesource.com/setup_20.x | bash - &&
-      apt-get install -y nodejs &&
-      if [ ! -f studio.py ]; then
-        echo '=== Repository Clone Ho Raha Hai ===' &&
-        git clone https://github.com/echowkidar/tts.git .
-      fi &&
-      echo '=== Python Packages Upgrade Ho Rahe Hain ===' &&
-      pip install --no-cache-dir --upgrade pip &&
+      set -e;
+
+      echo '================================================';
+      echo 'Installing System Packages';
+      echo '================================================';
+
+      for i in {1..5}; do
+        apt-get update && break || sleep 3;
+      done;
+
+      apt-get install -y --no-install-recommends \
+        curl \
+        git \
+        ffmpeg \
+        espeak-ng \
+        build-essential \
+        sed;
+
+      curl -fsSL https://deb.nodesource.com/setup_20.x | bash -;
+      apt-get install -y nodejs;
+
+      echo '================================================';
+      echo 'Fetching Latest Source';
+      echo '================================================';
+
+      if [ ! -d .git ]; then
+          git clone https://github.com/echowkidar/tts.git .
+      else
+          git fetch origin
+          git reset --hard origin/main
+      fi;
+
+      echo '================================================';
+      echo 'Installing Python Packages';
+      echo '================================================';
+
+      python -m pip install --no-cache-dir --upgrade pip;
+
       if [ -f requirements.txt ]; then
-        pip install --no-cache-dir -r requirements.txt
-      fi &&
-      echo '=== Non-Interactive Setup Chal Raha Hai ===' &&
-      yes | python studio.py setup &&
-      echo '=== Exposing Frontend Host ===' &&
-      if [ -f frontend/package.json ]; then
-        sed -i 's/\"dev\": \"vite\"/\"dev\": \"vite --host 0.0.0.0\"/g' frontend/package.json ;
-      elif [ -f package.json ]; then
-        sed -i 's/\"dev\": \"vite\"/\"dev\": \"vite --host 0.0.0.0\"/g' package.json ;
-      fi &&
-      export HOST=0.0.0.0 &&
-      echo '=== Voice Studio Start Ho Raha Hai ===' &&
+          pip install --no-cache-dir -r requirements.txt;
+      fi;
+
+      echo '================================================';
+      echo 'Installing Frontend Packages';
+      echo '================================================';
+
+      if [ -d frontend ]; then
+          cd frontend;
+          npm install;
+          cd ..;
+      fi;
+
+      echo '================================================';
+      echo 'Running Setup';
+      echo '================================================';
+
+      yes | python studio.py setup;
+
+      echo '================================================';
+      echo 'Starting Voice Studio';
+      echo '================================================';
+
       python studio.py start
       "
 
