@@ -34,9 +34,14 @@ class ErrorBoundary extends Component<Props, State> {
             VS
           </div>
           <h2 className="text-lg font-bold text-white mb-1">Voice Studio by Echowkidar</h2>
-          <p className="text-xs text-zinc-400 max-w-sm mb-4">
-            An unexpected error occurred while rendering the page. Tap below to reload.
+          <p className="text-xs text-zinc-400 max-w-sm mb-2">
+            An unexpected error occurred while rendering the page:
           </p>
+          {this.state.error && (
+            <div className="p-3 mb-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono max-w-md break-all text-left overflow-auto max-h-32">
+              {this.state.error.toString()}
+            </div>
+          )}
           <button
             onClick={() => window.location.reload()}
             className="px-5 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-500/20 transition-all"

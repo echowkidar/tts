@@ -5,9 +5,13 @@ import { focusRing } from "@/lib/theme";
 const SS_KEY = "vs.narrowBannerDismissed";
 
 export function TooNarrowBanner({ isDark }: { isDark: boolean }) {
-  const [dismissed, setDismissed] = useState<boolean>(
-    () => sessionStorage.getItem(SS_KEY) === "true",
-  );
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem(SS_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
   if (dismissed) return null;
 
   const wrap = isDark
@@ -20,7 +24,11 @@ export function TooNarrowBanner({ isDark }: { isDark: boolean }) {
       <button
         type="button"
         onClick={() => {
-          sessionStorage.setItem(SS_KEY, "true");
+          try {
+            sessionStorage.setItem(SS_KEY, "true");
+          } catch {
+            /* ignore storage blocked */
+          }
           setDismissed(true);
         }}
         className={`p-1 rounded shrink-0 ${focusRing}`}

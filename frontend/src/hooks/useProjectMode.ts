@@ -24,10 +24,12 @@ const EMPTY_DUB: DubBuffer = {
 };
 
 function readMode(): ProjectMode | null {
-  const v = localStorage.getItem(MODE_KEY);
-  // A stored "music" (from the removed music mode) falls through to null, so
-  // those users land on the ModeChooser and re-pick.
-  return v === "tts" || v === "podcast" || v === "transcribe" || v === "dub" ? v : null;
+  try {
+    const v = localStorage.getItem(MODE_KEY);
+    return v === "tts" || v === "podcast" || v === "transcribe" || v === "dub" ? v : null;
+  } catch {
+    return null;
+  }
 }
 function readDub(): DubBuffer {
   try {
@@ -89,16 +91,24 @@ export function useProjectMode(): UseProjectModeApi {
   const [dub, setDubState] = useState<DubBuffer>(readDub);
 
   useEffect(() => {
-    if (mode) localStorage.setItem(MODE_KEY, mode);
+    try {
+      if (mode) localStorage.setItem(MODE_KEY, mode);
+    } catch {}
   }, [mode]);
   useEffect(() => {
-    localStorage.setItem(TTS_KEY, JSON.stringify(tts));
+    try {
+      localStorage.setItem(TTS_KEY, JSON.stringify(tts));
+    } catch {}
   }, [tts]);
   useEffect(() => {
-    localStorage.setItem(TRANSCRIBE_KEY, JSON.stringify(transcribe));
+    try {
+      localStorage.setItem(TRANSCRIBE_KEY, JSON.stringify(transcribe));
+    } catch {}
   }, [transcribe]);
   useEffect(() => {
-    localStorage.setItem(DUB_KEY, JSON.stringify(dub));
+    try {
+      localStorage.setItem(DUB_KEY, JSON.stringify(dub));
+    } catch {}
   }, [dub]);
 
   const setMode = useCallback((m: ProjectMode) => setModeState(m), []);
