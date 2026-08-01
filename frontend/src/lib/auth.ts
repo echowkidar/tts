@@ -1,8 +1,8 @@
-"""Frontend API Client for Authentication, Subscriptions, Payments, and Admin functions."""
+/** Frontend API Client for Authentication, Subscriptions, Payments, and Admin functions. */
 
 export interface User {
   id: number;
-  email: str;
+  email: string;
   full_name?: string;
   is_active: boolean;
   is_admin: boolean;
@@ -87,7 +87,7 @@ export async function fetchMe(): Promise<User | null> {
   }
 }
 
-export async function loginEmail(email: string, password: str): Promise<TokenResponse> {
+export async function loginEmail(email: string, password: string): Promise<TokenResponse> {
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -102,7 +102,7 @@ export async function loginEmail(email: string, password: str): Promise<TokenRes
   return data;
 }
 
-export async function registerEmail(email: string, password: str, full_name?: string): Promise<TokenResponse> {
+export async function registerEmail(email: string, password: string, full_name?: string): Promise<TokenResponse> {
   const res = await fetch("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

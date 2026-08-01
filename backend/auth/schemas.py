@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime, date
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
+
+try:
+    from pydantic import EmailStr
+except Exception:
+    EmailStr = str  # Fallback to standard string if email-validator package is absent
 
 
 class UserRegister(BaseModel):
