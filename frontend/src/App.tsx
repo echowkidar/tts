@@ -1197,6 +1197,7 @@ export default function App() {
       </main>
 
       <ControlPanel
+        isAdmin={auth.user?.is_admin || false}
         isDark={isDark}
         engines={engines}
         asr={asrStatus}

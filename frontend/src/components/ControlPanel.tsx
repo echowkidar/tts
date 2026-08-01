@@ -28,6 +28,7 @@ const SOCIAL_LINKS = [
 ] as const;
 
 interface Props {
+  isAdmin?: boolean;
   isDark: boolean;
   engines: EngineInfo[];
   /** Speech-to-text model, shown in the engine popup so its weights are
@@ -55,6 +56,7 @@ interface Props {
 }
 
 export function ControlPanel({
+  isAdmin,
   isDark,
   engines,
   asr,
@@ -140,38 +142,41 @@ export function ControlPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
-        {/* Engine section */}
-        <section className="p-3 dark:bg-zinc-900 dark:border-zinc-800 bg-gray-100/80 border border-gray-200 rounded-lg">
-          <h3 className={`text-xs font-semibold uppercase tracking-wide mb-2 ${heading}`}>
-            Engine
-          </h3>
-          <EngineSelector
-            isDark={isDark}
-            engines={engines}
-            asr={asr}
-            activeName={activeEngine}
-            onSelect={onSelectEngine}
-            onLoad={onLoadEngine}
-            onInstall={onInstallEngine}
-            onDownload={onDownloadEngine}
-            onDeleteWeights={onDeleteWeights}
-            onUninstall={onUninstallEngine}
-          />
-        </section>
+        {/* Engine and Translation sections (Admin only) */}
+        {isAdmin && (
+          <>
+            <section className="p-3 dark:bg-zinc-900 dark:border-zinc-800 bg-gray-100/80 border border-gray-200 rounded-lg">
+              <h3 className={`text-xs font-semibold uppercase tracking-wide mb-2 ${heading}`}>
+                Engine
+              </h3>
+              <EngineSelector
+                isDark={isDark}
+                engines={engines}
+                asr={asr}
+                activeName={activeEngine}
+                onSelect={onSelectEngine}
+                onLoad={onLoadEngine}
+                onInstall={onInstallEngine}
+                onDownload={onDownloadEngine}
+                onDeleteWeights={onDeleteWeights}
+                onUninstall={onUninstallEngine}
+              />
+            </section>
 
-        {/* Translation section */}
-        <section className="p-3 dark:bg-zinc-900 dark:border-zinc-800 bg-gray-100/80 border border-gray-200 rounded-lg">
-          <h3 className={`text-xs font-semibold uppercase tracking-wide mb-2 ${heading}`}>
-            Translation
-          </h3>
-          <TranslationCard
-            isDark={isDark}
-            translate={translate}
-            onActivate={onActivateTranslator}
-            onDownload={onDownloadEngine}
-            onDelete={onDeleteWeights}
-          />
-        </section>
+            <section className="p-3 dark:bg-zinc-900 dark:border-zinc-800 bg-gray-100/80 border border-gray-200 rounded-lg">
+              <h3 className={`text-xs font-semibold uppercase tracking-wide mb-2 ${heading}`}>
+                Translation
+              </h3>
+              <TranslationCard
+                isDark={isDark}
+                translate={translate}
+                onActivate={onActivateTranslator}
+                onDownload={onDownloadEngine}
+                onDelete={onDeleteWeights}
+              />
+            </section>
+          </>
+        )}
 
         {/* Settings section */}
         <section className="p-3 dark:bg-zinc-900 dark:border-zinc-800 bg-gray-100/80 border border-gray-200 rounded-lg">

@@ -17,6 +17,7 @@ from .deps import (
     get_engine_uninstallers,
     get_model_deleter,
     get_model_downloader,
+    get_current_admin,
 )
 
 log = logging.getLogger(__name__)
@@ -126,6 +127,7 @@ def list_engines(em: EngineManager = Depends(get_engine_manager)) -> EnginesList
 def activate_engine(
     body: Annotated[ActivateRequest, Body(...)],
     em: EngineManager = Depends(get_engine_manager),
+    _admin=Depends(get_current_admin),
 ) -> EngineInfoModel:
     """Switch the active TTS engine. Unloads the previous one; the new
     engine is loaded lazily on the next synthesize call.
@@ -146,6 +148,7 @@ def activate_engine(
 def load_engine(
     name: str,
     em: EngineManager = Depends(get_engine_manager),
+    _admin=Depends(get_current_admin),
 ) -> EngineInfoModel:
     """Eagerly load an engine (useful for the UI to show a spinner)."""
     try:
@@ -167,7 +170,7 @@ def load_engine(
 
 
 @router.get("/{name}/install", response_model=InstallStatusModel)
-def install_status(name: str, installers=Depends(get_engine_installers)) -> InstallStatusModel:
+def install_status(name: str, installers=Depends(get_engine_installers), _admin=Depends(get_current_admin)) -> InstallStatusModel:
     """Current install state for an installable engine (Chatterbox / OmniVoice)."""
     inst = installers.get(name)
     if inst is None:
@@ -176,7 +179,7 @@ def install_status(name: str, installers=Depends(get_engine_installers)) -> Inst
 
 
 @router.post("/{name}/install", response_model=InstallStatusModel)
-def start_install(name: str, installers=Depends(get_engine_installers)) -> InstallStatusModel:
+def start_install(name: str, installers=Depends(get_engine_installers), _admin=Depends(get_current_admin)) -> InstallStatusModel:
     """Start (or coalesce onto a running) install of an isolated engine env."""
     inst = installers.get(name)
     if inst is None:
@@ -185,7 +188,7 @@ def start_install(name: str, installers=Depends(get_engine_installers)) -> Insta
 
 
 @router.get("/{name}/download", response_model=DownloadStatusModel)
-def download_status(name: str, downloader=Depends(get_model_downloader)) -> DownloadStatusModel:
+def download_status(name: str, downloader=Depends(get_model_downloader), _admin=Depends(get_current_admin)) -> DownloadStatusModel:
     """Current weight-download state for an in-process engine."""
     if name not in _DOWNLOADABLE:
         raise HTTPException(status_code=400, detail=f"{name} is not downloadable")
@@ -193,7 +196,7 @@ def download_status(name: str, downloader=Depends(get_model_downloader)) -> Down
 
 
 @router.post("/{name}/download", response_model=DownloadStatusModel)
-def start_download(name: str, downloader=Depends(get_model_downloader)) -> DownloadStatusModel:
+def start_download(name: str, downloader=Depends(get_model_downloader), _admin=Depends(get_current_admin)) -> DownloadStatusModel:
     """Start (or coalesce onto a running) weight download for the engine."""
     if name not in _DOWNLOADABLE:
         raise HTTPException(status_code=400, detail=f"{name} is not downloadable")
@@ -204,7 +207,7 @@ def start_download(name: str, downloader=Depends(get_model_downloader)) -> Downl
 
 
 @router.post("/{name}/download/cancel", response_model=DownloadStatusModel)
-def cancel_download(name: str, downloader=Depends(get_model_downloader)) -> DownloadStatusModel:
+def cancel_download(name: str, downloader=Depends(get_model_downloader), _admin=Depends(get_current_admin)) -> DownloadStatusModel:
     """Cancel an in-progress weight download (no-op if it isn't running)."""
     if name not in _DOWNLOADABLE:
         raise HTTPException(status_code=400, detail=f"{name} is not downloadable")
@@ -212,7 +215,7 @@ def cancel_download(name: str, downloader=Depends(get_model_downloader)) -> Down
 
 
 @router.get("/{name}/delete-weights", response_model=DeleteWeightsStatusModel)
-def delete_weights_status(name: str, deleter=Depends(get_model_deleter)) -> DeleteWeightsStatusModel:
+def delete_weights_status(name: str, deleter=Depends(get_model_deleter), _admin=Depends(get_current_admin)) -> DeleteWeightsStatusModel:
     """Current weight-deletion state."""
     if name not in _DELETABLE:
         raise HTTPException(status_code=400, detail=f"{name} weights are not deletable")
@@ -220,7 +223,7 @@ def delete_weights_status(name: str, deleter=Depends(get_model_deleter)) -> Dele
 
 
 @router.post("/{name}/delete-weights", response_model=DeleteWeightsStatusModel)
-def start_delete_weights(name: str, deleter=Depends(get_model_deleter)) -> DeleteWeightsStatusModel:
+def start_delete_weights(name: str, deleter=Depends(get_model_deleter), _admin=Depends(get_current_admin)) -> DeleteWeightsStatusModel:
     """Start (or coalesce onto a running) weight deletion."""
     if name not in _DELETABLE:
         raise HTTPException(status_code=400, detail=f"{name} weights are not deletable")
@@ -231,7 +234,7 @@ def start_delete_weights(name: str, deleter=Depends(get_model_deleter)) -> Delet
 
 
 @router.get("/{name}/uninstall", response_model=UninstallStatusModel)
-def uninstall_status(name: str, uninstallers=Depends(get_engine_uninstallers)) -> UninstallStatusModel:
+def uninstall_status(name: str, uninstallers=Depends(get_engine_uninstallers), _admin=Depends(get_current_admin)) -> UninstallStatusModel:
     """Current env-removal state for an isolated engine (Chatterbox / OmniVoice)."""
     u = uninstallers.get(name)
     if u is None:
@@ -240,7 +243,7 @@ def uninstall_status(name: str, uninstallers=Depends(get_engine_uninstallers)) -
 
 
 @router.post("/{name}/uninstall", response_model=UninstallStatusModel)
-def start_uninstall(name: str, uninstallers=Depends(get_engine_uninstallers)) -> UninstallStatusModel:
+def start_uninstall(name: str, uninstallers=Depends(get_engine_uninstallers), _admin=Depends(get_current_admin)) -> UninstallStatusModel:
     """Start (or coalesce onto a running) removal of an isolated engine env."""
     u = uninstallers.get(name)
     if u is None:
