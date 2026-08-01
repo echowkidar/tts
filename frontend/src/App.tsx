@@ -44,6 +44,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { AuthModal } from "@/components/AuthModal";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { AdminPanelModal } from "@/components/AdminPanelModal";
+import { AccountModal } from "@/components/AccountModal";
 
 const TTS_SEG_ID = "__tts__";
 
@@ -129,6 +130,7 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [subModalOpen, setSubModalOpen] = useState(false);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
 
   const project = useProject();
   const { config, loading: configLoading, error: configError, refresh: refreshConfig } = useConfig();
@@ -975,6 +977,7 @@ export default function App() {
           usage={sub.usage}
           onOpenAuth={() => setAuthModalOpen(true)}
           onOpenSubscription={() => setSubModalOpen(true)}
+          onOpenAccount={() => setAccountModalOpen(true)}
           onOpenAdmin={() => setAdminModalOpen(true)}
           onLogout={auth.logout}
         />
@@ -1310,6 +1313,17 @@ export default function App() {
       <AdminPanelModal
         isOpen={adminModalOpen}
         onClose={() => setAdminModalOpen(false)}
+        isDark={isDark}
+      />
+      <AccountModal
+        isOpen={accountModalOpen}
+        onClose={() => setAccountModalOpen(false)}
+        user={auth.user}
+        subscription={sub.subscription}
+        usage={sub.usage}
+        onOpenSubscription={() => setSubModalOpen(true)}
+        onOpenAdmin={() => setAdminModalOpen(true)}
+        onLogout={auth.logout}
         isDark={isDark}
       />
     </div>

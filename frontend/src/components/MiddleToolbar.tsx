@@ -31,6 +31,7 @@ interface Props {
   usage: UsageInfo | null;
   onOpenAuth: () => void;
   onOpenSubscription: () => void;
+  onOpenAccount: () => void;
   onOpenAdmin: () => void;
   onLogout: () => void;
 }
@@ -57,6 +58,7 @@ export function MiddleToolbar({
   usage,
   onOpenAuth,
   onOpenSubscription,
+  onOpenAccount,
   onOpenAdmin,
   onLogout,
 }: Props) {
@@ -169,19 +171,19 @@ export function MiddleToolbar({
         ) : (
           <div className="flex items-center gap-1">
             <button
-              onClick={onOpenSubscription}
-              className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-colors ${
-                isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200" : "bg-gray-100 border-gray-300 text-gray-800"
+              onClick={onOpenAccount}
+              className={`p-1.5 px-2.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700" : "bg-gray-100 border-gray-300 text-gray-800 hover:bg-gray-200"
               }`}
-              title={user?.email}
+              title="Click to view My Account details"
             >
               <UserIcon className="w-3.5 h-3.5 text-orange-400" />
-              <span className="max-w-[100px] truncate">{user?.full_name || user?.email.split("@")[0]}</span>
+              <span className="max-w-[120px] truncate">{user?.full_name || user?.email.split("@")[0]}</span>
             </button>
             <button
               onClick={onLogout}
               className={`p-1.5 rounded-lg border transition-colors ${iconBtn}`}
-              title="Sign Out"
+              title="Sign Out / Logout"
             >
               <LogOut className="w-3.5 h-3.5 text-zinc-400" />
             </button>
