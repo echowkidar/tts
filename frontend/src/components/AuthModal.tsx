@@ -102,15 +102,37 @@ export function AuthModal({ isOpen, onClose, onLogin, onRegister, isDark }: Prop
           {/* Quick Google Sign In */}
           <button
             type="button"
+            disabled={loading}
             onClick={() => {
-              // Simulated Google Login for demo/fast access or custom ID Token input
-              const gEmail = prompt("Enter Google Account Email for instant Google Sign-In:");
-              if (gEmail) {
+              setError(null);
+              const gClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || "";
+              if (window.google?.accounts?.id && gClientId) {
                 setLoading(true);
-                onRegister(gEmail, "GoogleAuthPass123!", gEmail.split("@")[0])
-                  .catch(() => onLogin(gEmail, "GoogleAuthPass123!"))
-                  .then(() => onClose())
-                  .finally(() => setLoading(false));
+                try {
+                  window.google.accounts.id.initialize({
+                    client_id: gClientId,
+                    callback: async (response: any) => {
+                      if (response?.credential && onGoogleLogin) {
+                        try {
+                          await onGoogleLogin(response.credential);
+                          onClose();
+                        } catch (err: any) {
+                          setError(err.message || "Google Sign-In failed");
+                        } finally {
+                          setLoading(false);
+                        }
+                      }
+                    },
+                  });
+                  window.google.accounts.id.prompt();
+                } catch (e: any) {
+                  setLoading(false);
+                  setError("Google Sign-In error: " + (e.message || "Invalid Client ID"));
+                }
+              } else {
+                // If Google Client ID is not configured yet, notify user or use direct email sign in tab
+                setTab("login");
+                setError("Google Client ID is not set in environment variables yet. Please sign in with email/password below or configure GOOGLE_CLIENT_ID in Portainer.");
               }
             }}
             className={`w-full py-2.5 px-4 rounded-xl border font-medium text-sm flex items-center justify-center gap-3 transition-all ${
