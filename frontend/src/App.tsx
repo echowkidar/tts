@@ -1331,13 +1331,16 @@ export default function App() {
       />
       <SubscriptionModal
         isOpen={subModalOpen}
-        onClose={() => setSubModalOpen(false)}
+        onClose={() => {
+          setSubModalOpen(false);
+          handleSubAck();
+        }}
         plans={sub.plans}
         currentSub={sub.subscription}
         usage={sub.usage}
         onSubmitUTR={sub.submitUTR}
         isDark={isDark}
-        closable={!requireSub}
+        closable={true}
         onAcknowledge={handleSubAck}
       />
       <AdminPanelModal
