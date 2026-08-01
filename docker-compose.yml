@@ -3,12 +3,7 @@ version: '3.8'
 services:
   voice-studio:
     build: .
-    container_name: voice-studio
     restart: unless-stopped
-
-    networks:
-      - default
-      - proxy
 
     dns:
       - 8.8.8.8
@@ -35,7 +30,3 @@ volumes:
   voice_studio_uploads:
   voice_studio_voices:
   voice_studio_cache:
-
-networks:
-  proxy:
-    external: true
