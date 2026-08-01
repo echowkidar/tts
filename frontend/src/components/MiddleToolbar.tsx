@@ -1,9 +1,11 @@
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, User as UserIcon, LogOut, Shield, Sparkles } from "lucide-react";
 import { SampleMenu } from "./SampleMenu";
 import { ImportExportMenu } from "./ImportExportMenu";
 import { ModeToggle } from "./ModeToggle";
+import { UsageBadge } from "./UsageBadge";
 import type { Sample, TtsSample } from "@/lib/samples";
 import type { ProjectMode } from "@/types/models";
+import type { User, Subscription, UsageInfo } from "@/lib/auth";
 import { focusRing } from "@/lib/theme";
 
 interface Props {
@@ -21,6 +23,16 @@ interface Props {
   onLoadTtsSample: (sample: TtsSample) => void;
   onExportSubtitles: () => void;
   subtitlesDisabled: boolean;
+  // Auth & Subscriptions
+  user: User | null;
+  isLoggedIn: boolean;
+  isAdmin: boolean;
+  subscription: Subscription | null;
+  usage: UsageInfo | null;
+  onOpenAuth: () => void;
+  onOpenSubscription: () => void;
+  onOpenAdmin: () => void;
+  onLogout: () => void;
 }
 
 export function MiddleToolbar({
@@ -38,13 +50,23 @@ export function MiddleToolbar({
   onLoadTtsSample,
   onExportSubtitles,
   subtitlesDisabled,
+  user,
+  isLoggedIn,
+  isAdmin,
+  subscription,
+  usage,
+  onOpenAuth,
+  onOpenSubscription,
+  onOpenAdmin,
+  onLogout,
 }: Props) {
   const generateDisabled = busy || cachedCount === validCount;
   const isPodcast = mode === "podcast";
+  const iconBtn = isDark ? "hover:bg-zinc-800 text-zinc-300" : "hover:bg-gray-100 text-gray-700";
 
   return (
     <div
-      className={`flex items-center justify-between gap-2 @[1200px]:gap-3 p-2.5 @[1200px]:p-2.5 border-b ${
+      className={`flex items-center justify-between gap-2 @[1200px]:gap-3 p-2.5 @[1200px]:p-2.5 border-b flex-wrap ${
         isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-gray-200"
       }`}
     >
@@ -66,7 +88,17 @@ export function MiddleToolbar({
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5 flex-wrap">
+        {/* Usage Badge / Subscription Upgrade */}
+        {isLoggedIn && usage && (
+          <UsageBadge
+            subscription={subscription}
+            usage={usage}
+            onUpgradeClick={onOpenSubscription}
+            isDark={isDark}
+          />
+        )}
+
         {isPodcast && (
           <button
             type="button"
@@ -100,13 +132,10 @@ export function MiddleToolbar({
           busy={busy}
           onExportJson={onExportJson}
           onImportJson={onImportJson}
-          // Transcribe/Dub modes have no project-cached audio to subtitle here
-          // (Dub renders + downloads its WAV inside DubEditor).
           onExportSubtitles={mode === "transcribe" || mode === "dub" ? undefined : onExportSubtitles}
           subtitlesDisabled={subtitlesDisabled}
         />
 
-        {/* Transcribe mode has no sample scripts — its input is an audio file. */}
         {(mode === "podcast" || mode === "tts") && (
           <SampleMenu
             isDark={isDark}
@@ -114,6 +143,49 @@ export function MiddleToolbar({
             onLoadPodcast={onLoadPodcastSample}
             onLoadTts={onLoadTtsSample}
           />
+        )}
+
+        {/* Admin Console Button */}
+        {isAdmin && (
+          <button
+            onClick={onOpenAdmin}
+            className="px-2.5 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-semibold text-xs flex items-center gap-1.5 transition-all"
+            title="Open Admin Approval Console"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Admin</span>
+          </button>
+        )}
+
+        {/* Auth Sign In / User Profile Button */}
+        {!isLoggedIn ? (
+          <button
+            onClick={onOpenAuth}
+            className="px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs flex items-center gap-1.5 transition-all shadow-md shadow-orange-500/20"
+          >
+            <UserIcon className="w-3.5 h-3.5" />
+            <span>Sign In</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onOpenSubscription}
+              className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-colors ${
+                isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200" : "bg-gray-100 border-gray-300 text-gray-800"
+              }`}
+              title={user?.email}
+            >
+              <UserIcon className="w-3.5 h-3.5 text-orange-400" />
+              <span className="max-w-[100px] truncate">{user?.full_name || user?.email.split("@")[0]}</span>
+            </button>
+            <button
+              onClick={onLogout}
+              className={`p-1.5 rounded-lg border transition-colors ${iconBtn}`}
+              title="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5 text-zinc-400" />
+            </button>
+          </div>
         )}
       </div>
     </div>

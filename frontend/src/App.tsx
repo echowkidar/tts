@@ -37,9 +37,13 @@ import { useProject } from "@/lib/store";
 import type { CachedAudio, Project, Speaker, SynthSpeaker, VoiceMetadata } from "@/types/models";
 import { getDefaultCfgForEngine } from "@/lib/engineHints";
 import { effectiveMode, type OmniMode } from "@/lib/voiceModes";
-import { TooNarrowBanner } from "@/components/TooNarrowBanner";
 import { useViewportWidth } from "@/hooks/useViewportWidth";
 import { showNarrowBanner } from "@/lib/layout";
+import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { AuthModal } from "@/components/AuthModal";
+import { SubscriptionModal } from "@/components/SubscriptionModal";
+import { AdminPanelModal } from "@/components/AdminPanelModal";
 
 const TTS_SEG_ID = "__tts__";
 
@@ -120,6 +124,12 @@ function isSegmentCached(
 }
 
 export default function App() {
+  const auth = useAuth();
+  const sub = useSubscription(auth.isLoggedIn);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [subModalOpen, setSubModalOpen] = useState(false);
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
+
   const project = useProject();
   const { config, loading: configLoading, error: configError, refresh: refreshConfig } = useConfig();
   const {
@@ -942,6 +952,15 @@ export default function App() {
           subtitlesDisabled={
             pm.mode === "tts" ? !project.audioCache[TTS_SEG_ID] : cachedCount === 0
           }
+          user={auth.user}
+          isLoggedIn={auth.isLoggedIn}
+          isAdmin={auth.isAdmin}
+          subscription={sub.subscription}
+          usage={sub.usage}
+          onOpenAuth={() => setAuthModalOpen(true)}
+          onOpenSubscription={() => setSubModalOpen(true)}
+          onOpenAdmin={() => setAdminModalOpen(true)}
+          onLogout={auth.logout}
         />
 
         {pm.mode === null ? (
@@ -1253,6 +1272,30 @@ export default function App() {
           }}
         />
       )}
+
+      {/* Auth & Subscription Modals */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onLogin={auth.login}
+        onRegister={auth.register}
+        onGoogleLogin={auth.googleLogin}
+        isDark={isDark}
+      />
+      <SubscriptionModal
+        isOpen={subModalOpen}
+        onClose={() => setSubModalOpen(false)}
+        plans={sub.plans}
+        currentSub={sub.subscription}
+        usage={sub.usage}
+        onSubmitUTR={sub.submitUTR}
+        isDark={isDark}
+      />
+      <AdminPanelModal
+        isOpen={adminModalOpen}
+        onClose={() => setAdminModalOpen(false)}
+        isDark={isDark}
+      />
     </div>
     </ConfirmProvider>
   );

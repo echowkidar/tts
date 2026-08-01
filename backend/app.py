@@ -303,7 +303,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.update_checker = UpdateChecker(get_version())
     app.state.update_runner = UpdateRunner()
 
+    # ---- Database Init
+    from .auth.database import init_db
+    from .api.auth import router as auth_router
+    from .api.subscriptions import router as subscriptions_router
+    from .api.admin import router as admin_router
+
+    try:
+        import asyncio
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(init_db())
+        else:
+            loop.run_until_complete(init_db())
+    except Exception as err:
+        log.exception("Error initializing database: %s", err)
+
     # ---- routers
+    app.include_router(auth_router)
+    app.include_router(subscriptions_router)
+    app.include_router(admin_router)
     app.include_router(health_router)
     app.include_router(engines_router)
     app.include_router(voices_router)

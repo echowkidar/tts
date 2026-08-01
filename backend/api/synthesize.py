@@ -11,12 +11,15 @@ import base64
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, Query, Response
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions import BackendError
 from ..services.synthesize import SynthRequest, SynthService, Speaker as ServiceSpeaker
-from .deps import get_synth_service
+from .deps import get_synth_service, get_current_user_optional
+from ..auth.database import get_db
+from ..auth.models import User
+from ..auth.service import check_usage_and_limit, record_usage
 from .schemas import SynthBase64Response, SynthRequestBody
 
 log = logging.getLogger(__name__)
@@ -29,17 +32,32 @@ router = APIRouter(tags=["synthesize"])
     responses={
         200: {"content": {"audio/wav": {}}},
         400: {"description": "Invalid text, speaker, or voice"},
+        403: {"description": "Character limit reached or model not allowed on plan"},
         404: {"description": "Voice not found"},
         503: {"description": "Model not loaded yet"},
         504: {"description": "Synthesis timed out"},
         507: {"description": "GPU out of memory"},
     },
 )
-def synthesize(
+async def synthesize(
     body: SynthRequestBody,
     response_format: str = Query(default="wav", pattern="^(wav|base64)$"),
     svc: SynthService = Depends(get_synth_service),
+    current_user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
 ) -> Response:
+    """Synthesize text to speech with usage tracking & tier checks."""
+    engine_key = body.engine or svc.active_engine_name or "kokoro"
+    char_count = len(body.text or "")
+
+    # Enforce character limits if user is logged in
+    if current_user:
+        allowed, msg = await check_usage_and_limit(db, current_user.id, char_count, engine_key)
+        if not allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=msg,
+            )
     """Synthesize text to speech.
 
     Pass a script in `text` and the list of speakers in `speakers`. If `text`
@@ -82,6 +100,9 @@ def synthesize(
         # Domain errors: let the global handler in app.py turn them into the
         # proper JSON shape (with `code`).
         raise
+
+    if current_user:
+        await record_usage(db, current_user.id, char_count, engine_key)
 
     headers = {
         "X-Sample-Rate": str(result.sample_rate),
