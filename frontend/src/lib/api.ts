@@ -279,7 +279,7 @@ export async function activateEngine(name: string): Promise<EngineInfo> {
   return jsonOrThrow<EngineInfo>(
     await fetch(`${API_BASE}/engines/activate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
       body: JSON.stringify({ name }),
     }),
   );
@@ -289,19 +289,20 @@ export async function loadEngine(name: string): Promise<EngineInfo> {
   return jsonOrThrow<EngineInfo>(
     await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/load`, {
       method: "POST",
+      headers: getAuthHeaders(),
     }),
   );
 }
 
 export async function startEngineInstall(name: string): Promise<InstallStatus> {
   return jsonOrThrow<InstallStatus>(
-    await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/install`, { method: "POST" }),
+    await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/install`, { method: "POST", headers: getAuthHeaders() }),
   );
 }
 
 export async function getEngineInstallStatus(name: string): Promise<InstallStatus> {
   return jsonOrThrow<InstallStatus>(
-    await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/install`),
+    await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/install`, { headers: getAuthHeaders() }),
   );
 }
 
@@ -309,13 +310,14 @@ export async function startModelDownload(name: string): Promise<DownloadStatus> 
   return jsonOrThrow<DownloadStatus>(
     await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/download`, {
       method: "POST",
+      headers: getAuthHeaders(),
     }),
   );
 }
 
 export async function getModelDownloadStatus(name: string): Promise<DownloadStatus> {
   return jsonOrThrow<DownloadStatus>(
-    await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/download`),
+    await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/download`, { headers: getAuthHeaders() }),
   );
 }
 
@@ -323,6 +325,7 @@ export async function cancelModelDownload(name: string): Promise<DownloadStatus>
   return jsonOrThrow<DownloadStatus>(
     await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/download/cancel`, {
       method: "POST",
+      headers: getAuthHeaders(),
     }),
   );
 }
@@ -331,13 +334,14 @@ export async function startDeleteWeights(name: string): Promise<DeleteWeightsSta
   return jsonOrThrow<DeleteWeightsStatus>(
     await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/delete-weights`, {
       method: "POST",
+      headers: getAuthHeaders(),
     }),
   );
 }
 
 export async function getDeleteWeightsStatus(name: string): Promise<DeleteWeightsStatus> {
   return jsonOrThrow<DeleteWeightsStatus>(
-    await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/delete-weights`),
+    await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/delete-weights`, { headers: getAuthHeaders() }),
   );
 }
 
@@ -345,13 +349,14 @@ export async function startUninstallEngine(name: string): Promise<UninstallStatu
   return jsonOrThrow<UninstallStatus>(
     await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/uninstall`, {
       method: "POST",
+      headers: getAuthHeaders(),
     }),
   );
 }
 
 export async function getUninstallStatus(name: string): Promise<UninstallStatus> {
   return jsonOrThrow<UninstallStatus>(
-    await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/uninstall`),
+    await fetch(`${API_BASE}/engines/${encodeURIComponent(name)}/uninstall`, { headers: getAuthHeaders() }),
   );
 }
 
