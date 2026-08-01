@@ -147,6 +147,14 @@ export default function App() {
   const hasAcked = auth.user?.id ? !!ackedPlans[auth.user.id] : false;
   const requireSub = !auth.loading && auth.isLoggedIn && !sub.loading && !hasAcked;
 
+  const isNewUser = useMemo(() => {
+    if (!auth.user || !auth.user.created_at) return false;
+    const createdDate = new Date(auth.user.created_at);
+    const now = new Date();
+    const diffMinutes = (now.getTime() - createdDate.getTime()) / (1000 * 60);
+    return diffMinutes < 15; // Within 15 minutes of signup
+  }, [auth.user]);
+
   useEffect(() => {
     if (requireLogin) {
       setAuthModalOpen(true);
@@ -1340,7 +1348,7 @@ export default function App() {
         usage={sub.usage}
         onSubmitUTR={sub.submitUTR}
         isDark={isDark}
-        closable={true}
+        closable={requireSub ? !isNewUser : true}
         onAcknowledge={handleSubAck}
       />
       <AdminPanelModal
