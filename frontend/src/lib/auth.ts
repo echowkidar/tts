@@ -204,3 +204,36 @@ export async function fetchAdminUsers(): Promise<any[]> {
   if (!res.ok) throw new Error("Failed to load users list");
   return await res.json();
 }
+
+export async function deleteAdminUser(user_id: number): Promise<void> {
+  const res = await fetch(`/api/admin/users/${user_id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(extractErrorMessage(err, "Failed to delete user"));
+  }
+}
+
+export async function updateAdminUserRole(user_id: number, role: string): Promise<void> {
+  const res = await fetch(`/api/admin/users/${user_id}/role?role=${encodeURIComponent(role)}`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(extractErrorMessage(err, "Failed to update user role"));
+  }
+}
+
+export async function updateAdminUserTier(user_id: number, tier: string): Promise<void> {
+  const res = await fetch(`/api/admin/users/${user_id}/tier?tier=${encodeURIComponent(tier)}`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(extractErrorMessage(err, "Failed to update user tier"));
+  }
+}

@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { X, Shield, CheckCircle, XCircle, Users, CreditCard, RefreshCw, AlertCircle } from "lucide-react";
-import { PaymentRequest, approveAdminPayment, fetchAdminPayments, fetchAdminUsers } from "@/lib/auth";
+import { X, Shield, CheckCircle, XCircle, Users, CreditCard, RefreshCw, AlertCircle, Trash2 } from "lucide-react";
+import {
+  PaymentRequest,
+  approveAdminPayment,
+  deleteAdminUser,
+  fetchAdminPayments,
+  fetchAdminUsers,
+  updateAdminUserRole,
+  updateAdminUserTier,
+} from "@/lib/auth";
 
 interface Props {
   isOpen: boolean;
@@ -54,12 +62,55 @@ export function AdminPanelModal({ isOpen, onClose, isDark }: Props) {
     }
   };
 
+  const handleDeleteUser = async (userId: number, email: string) => {
+    if (email === "admin@echowkidar.com") {
+      alert("Master Admin account cannot be deleted.");
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to permanently delete user "${email}"? This action cannot be undone.`)) {
+      return;
+    }
+    setActionLoading(userId);
+    try {
+      await deleteAdminUser(userId);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || "Failed to delete user");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRoleChange = async (userId: number, newRole: string) => {
+    setActionLoading(userId);
+    try {
+      await updateAdminUserRole(userId, newRole);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || "Failed to update role");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleTierChange = async (userId: number, newTier: string) => {
+    setActionLoading(userId);
+    try {
+      await updateAdminUserTier(userId, newTier);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || "Failed to update tier");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const bg = isDark ? "bg-zinc-900 border-zinc-800 text-white" : "bg-white border-gray-200 text-gray-900";
   const cardBg = isDark ? "bg-zinc-950 border-zinc-800" : "bg-gray-50 border-gray-200";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className={`relative w-full max-w-4xl max-h-[85vh] rounded-3xl border shadow-2xl flex flex-col overflow-hidden ${bg}`}>
+      <div className={`relative w-full max-w-5xl max-h-[85vh] rounded-3xl border shadow-2xl flex flex-col overflow-hidden ${bg}`}>
         {/* Header */}
         <div className="p-6 border-b border-zinc-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -69,7 +120,7 @@ export function AdminPanelModal({ isOpen, onClose, isDark }: Props) {
             <div>
               <h2 className="text-xl font-bold">Admin Management Console</h2>
               <p className={`text-xs ${isDark ? "text-zinc-400" : "text-gray-500"}`}>
-                Approve UPI Payments & manage user subscription tiers.
+                Approve UPI Payments, change user plans, and manage registered accounts.
               </p>
             </div>
           </div>
@@ -174,29 +225,61 @@ export function AdminPanelModal({ isOpen, onClose, isDark }: Props) {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-zinc-800 text-zinc-400">
-                    <th className="py-2 px-3">User ID</th>
-                    <th className="py-2 px-3">Email</th>
-                    <th className="py-2 px-3">Name</th>
-                    <th className="py-2 px-3">Subscription Tier</th>
-                    <th className="py-2 px-3">Daily Limit</th>
-                    <th className="py-2 px-3">Role</th>
+                    <th className="py-2.5 px-3">User ID</th>
+                    <th className="py-2.5 px-3">Email / Name</th>
+                    <th className="py-2.5 px-3">Subscription Tier</th>
+                    <th className="py-2.5 px-3">Daily Limit</th>
+                    <th className="py-2.5 px-3">Role</th>
+                    <th className="py-2.5 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/50">
                   {users.map((u) => (
-                    <tr key={u.id}>
-                      <td className="py-2.5 px-3 font-mono text-zinc-500">#{u.id}</td>
-                      <td className="py-2.5 px-3 font-medium text-white">{u.email}</td>
-                      <td className="py-2.5 px-3 text-zinc-400">{u.full_name || "—"}</td>
-                      <td className="py-2.5 px-3">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-500/10 text-orange-400 border border-orange-500/20">
-                          {u.subscription_tier}
-                        </span>
+                    <tr key={u.id} className="hover:bg-zinc-800/20 transition-colors">
+                      <td className="py-3 px-3 font-mono text-zinc-500">#{u.id}</td>
+                      <td className="py-3 px-3">
+                        <div className="font-medium text-white">{u.email}</div>
+                        <div className="text-[11px] text-zinc-400">{u.full_name || "—"}</div>
                       </td>
-                      <td className="py-2.5 px-3 text-zinc-400">
+                      <td className="py-3 px-3">
+                        <select
+                          value={u.subscription_tier}
+                          disabled={actionLoading === u.id}
+                          onChange={(e) => handleTierChange(u.id, e.target.value)}
+                          className="bg-zinc-800 border border-zinc-700 text-orange-400 text-xs rounded-lg px-2 py-1 font-semibold uppercase tracking-wider cursor-pointer"
+                        >
+                          <option value="free">FREE</option>
+                          <option value="starter">STARTER (₹299)</option>
+                          <option value="pro">PRO (₹799)</option>
+                          <option value="ultra">ULTRA (₹1,499)</option>
+                        </select>
+                      </td>
+                      <td className="py-3 px-3 text-zinc-400">
                         {u.daily_char_limit === -1 ? "Unlimited" : `${u.daily_char_limit.toLocaleString()} chars`}
                       </td>
-                      <td className="py-2.5 px-3 text-zinc-500">{u.role}</td>
+                      <td className="py-3 px-3">
+                        <select
+                          value={u.role}
+                          disabled={actionLoading === u.id || u.email === "admin@echowkidar.com"}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          className="bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs rounded-lg px-2 py-1 font-medium cursor-pointer"
+                        >
+                          <option value="user">user</option>
+                          <option value="admin">admin</option>
+                        </select>
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        {u.email !== "admin@echowkidar.com" && (
+                          <button
+                            disabled={actionLoading === u.id}
+                            onClick={() => handleDeleteUser(u.id, u.email)}
+                            className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all"
+                            title="Delete User Account"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

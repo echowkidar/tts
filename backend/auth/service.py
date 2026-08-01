@@ -239,17 +239,70 @@ async def approve_payment(
         # Upgrade User's Subscription
         tier_enum = PlanTier(p_req.plan_tier)
         plan_cfg = PLAN_CONFIGS[tier_enum]
-
         sub = await get_user_subscription(db, p_req.user_id)
         sub.tier = p_req.plan_tier
         sub.status = "active"
+        plan_cfg = PLAN_CONFIGS[PlanTier(p_req.plan_tier)]
         sub.daily_char_limit = plan_cfg["daily_char_limit"]
-        sub.allowed_models = ",".join(plan_cfg["allowed_models"])
+        sub.allowed_models = ",".join(plan_cfg["allowed_models"]) if plan_cfg["allowed_models"] != ["all"] else "all"
         sub.expires_at = datetime.utcnow() + timedelta(days=30)
         await db.commit()
-    elif action == "reject":
-        p_req.status = "rejected"
-        p_req.admin_notes = admin_notes
-        await db.commit()
+        await db.refresh(sub)
 
+    p_req.status = "approved" if action == "approve" else "rejected"
+    p_req.approved_at = datetime.utcnow()
+    p_req.admin_notes = admin_notes
+    await db.commit()
+    await db.refresh(p_req)
     return p_req
+
+
+async def delete_user_account(db: AsyncSession, user_id: int) -> bool:
+    """Delete a user account and all associated subscriptions, logs, and requests."""
+    from sqlalchemy import delete
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise ValueError("User not found")
+
+    if user.email == "admin@echowkidar.com":
+        raise ValueError("Master admin account cannot be deleted")
+
+    await db.execute(delete(Subscription).where(Subscription.user_id == user_id))
+    await db.execute(delete(UsageLog).where(UsageLog.user_id == user_id))
+    await db.execute(delete(PaymentRequest).where(PaymentRequest.user_id == user_id))
+    await db.execute(delete(User).where(User.id == user_id))
+    await db.commit()
+    return True
+
+
+async def update_user_role(db: AsyncSession, user_id: int, new_role: str) -> User:
+    """Update user role (user vs admin)."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise ValueError("User not found")
+
+    is_admin = new_role.lower() == "admin"
+    user.role = "admin" if is_admin else "user"
+    user.is_admin = is_admin
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+async def update_user_tier(db: AsyncSession, user_id: int, new_tier: str) -> Subscription:
+    """Manually update user's subscription tier."""
+    tier_enum = PlanTier(new_tier.lower())
+    plan_cfg = PLAN_CONFIGS[tier_enum]
+
+    sub = await get_user_subscription(db, user_id)
+    sub.tier = tier_enum.value
+    sub.status = "active"
+    sub.daily_char_limit = plan_cfg["daily_char_limit"]
+    sub.allowed_models = ",".join(plan_cfg["allowed_models"]) if plan_cfg["allowed_models"] != ["all"] else "all"
+
+    await db.commit()
+    await db.refresh(sub)
+    return sub
