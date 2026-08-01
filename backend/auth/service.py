@@ -14,7 +14,7 @@ from .schemas import UserRegister, PaymentSubmitRequest
 from .jwt_utils import hash_password, verify_password, create_access_token
 
 
-ADMIN_EMAILS = {"admin@echowkidar.com", "echowkidar@gmail.com", "echowkidar3@gmail.com"}
+ADMIN_EMAILS = {"admin@echowkidar.com"}
 
 
 def is_admin_email(email: str) -> bool:

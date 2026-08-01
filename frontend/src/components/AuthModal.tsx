@@ -22,7 +22,7 @@ export function AuthModal({ isOpen, onClose, onLogin, onRegister, onGoogleLogin,
   useEffect(() => {
     if (!isOpen) return;
     const gClientId =
-      (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
+      import.meta.env.VITE_GOOGLE_CLIENT_ID ||
       "51193166575-n2fvtsruk2lejtvjt6hckjg56rtd2ttf.apps.googleusercontent.com";
 
     const initGoogleBtn = () => {
