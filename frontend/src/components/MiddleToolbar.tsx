@@ -169,10 +169,10 @@ export function MiddleToolbar({
             <span>Sign In</span>
           </button>
         ) : (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button
               onClick={onOpenAccount}
-              className={`p-1.5 px-2.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              className={`p-1.5 px-3 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
                 isDark ? "bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700" : "bg-gray-100 border-gray-300 text-gray-800 hover:bg-gray-200"
               }`}
               title="Click to view My Account details"
@@ -182,10 +182,11 @@ export function MiddleToolbar({
             </button>
             <button
               onClick={onLogout}
-              className={`p-1.5 rounded-lg border transition-colors ${iconBtn}`}
-              title="Sign Out / Logout"
+              className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+              title="Sign Out / Logout of your account"
             >
-              <LogOut className="w-3.5 h-3.5 text-zinc-400" />
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
             </button>
           </div>
         )}
