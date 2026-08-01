@@ -169,10 +169,9 @@ async def check_usage_and_limit(
     """Check if user can synthesize char_count text with engine_key under their tier."""
     sub = await get_user_subscription(db, user_id)
 
-    # Check allowed engine
-    allowed_list = sub.allowed_models.split(",") if sub.allowed_models != "all" else ["all"]
-    if "all" not in allowed_list and engine_key.lower() not in allowed_list:
-        return False, f"The '{engine_key}' engine is not included in your {sub.tier.capitalize()} plan. Please upgrade your plan."
+    # Engine restriction removed because the active engine is global across the server.
+    # If the admin switches to a heavier model, we allow all users to use it (within their character limits),
+    # otherwise free users get completely locked out of the app.
 
     # Unlimited tier
     if sub.daily_char_limit == -1:
