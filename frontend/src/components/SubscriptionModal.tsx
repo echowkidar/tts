@@ -264,7 +264,7 @@ export function SubscriptionModal({
                     </div>
                     <h4 className="text-lg font-bold text-green-400">Payment Request Submitted!</h4>
                     <p className="text-xs text-zinc-300 max-w-md mx-auto">
-                      Your UTR Reference (<strong>{utrNumber}</strong>) has been submitted for verification. Admin will approve your subscription within minutes.
+                      Your UTR Reference (<strong>{utrNumber}</strong>) has been submitted for verification. Your plan is under activation, it will take some time.
                     </p>
                     <button
                       onClick={() => {
