@@ -14,33 +14,44 @@ from .schemas import UserRegister, PaymentSubmitRequest
 from .jwt_utils import hash_password, verify_password, create_access_token
 
 
+ADMIN_EMAILS = {"admin@echowkidar.com", "echowkidar@gmail.com", "echowkidar3@gmail.com"}
+
+
+def is_admin_email(email: str) -> bool:
+    if not email:
+        return False
+    return email.lower().startswith("admin@") or email.lower() in ADMIN_EMAILS
+
+
 async def register_user(db: AsyncSession, data: UserRegister) -> Tuple[User, Subscription]:
-    """Register new email user and assign Free Subscription tier."""
+    """Register new email user and assign Free/Ultra Subscription tier."""
     # Check if email exists
     result = await db.execute(select(User).where(User.email == data.email))
     if result.scalar_one_or_none():
         raise ValueError("User with this email already exists")
 
+    admin = is_admin_email(data.email)
     new_user = User(
         email=data.email,
         hashed_password=hash_password(data.password),
         full_name=data.full_name or data.email.split("@")[0],
         is_active=True,
-        is_admin=False,
-        role="user",
+        is_admin=admin,
+        role="admin" if admin else "user",
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
 
-    # Assign default Free plan
-    free_config = PLAN_CONFIGS[PlanTier.FREE]
+    # Assign Ultra plan to admin, Free to normal user
+    plan_tier = PlanTier.ULTRA if admin else PlanTier.FREE
+    plan_cfg = PLAN_CONFIGS[plan_tier]
     new_sub = Subscription(
         user_id=new_user.id,
-        tier=PlanTier.FREE.value,
+        tier=plan_tier.value,
         status="active",
-        daily_char_limit=free_config["daily_char_limit"],
-        allowed_models=",".join(free_config["allowed_models"]),
+        daily_char_limit=plan_cfg["daily_char_limit"],
+        allowed_models=",".join(plan_cfg["allowed_models"]) if plan_cfg["allowed_models"] != ["all"] else "all",
     )
     db.add(new_sub)
     await db.commit()
@@ -50,13 +61,19 @@ async def register_user(db: AsyncSession, data: UserRegister) -> Tuple[User, Sub
 
 
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> Optional[User]:
-    """Authenticate email & password."""
+    """Authenticate email & password and promote admin if needed."""
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if not user or not user.hashed_password:
         return None
     if not verify_password(password, user.hashed_password):
         return None
+
+    # Auto-promote admin emails
+    if is_admin_email(email) and not user.is_admin:
+        user.is_admin = True
+        user.role = "admin"
+        await db.commit()
     return user
 
 
@@ -79,34 +96,38 @@ async def google_auth(db: AsyncSession, google_id_token: str) -> User:
     result = await db.execute(select(User).where((User.google_id == google_id) | (User.email == email)))
     user = result.scalar_one_or_none()
 
+    admin = is_admin_email(email)
     if not user:
         user = User(
             email=email,
             google_id=google_id,
             full_name=full_name,
             is_active=True,
-            is_admin=False,
-            role="user",
+            is_admin=admin,
+            role="admin" if admin else "user",
         )
         db.add(user)
         await db.commit()
         await db.refresh(user)
 
-        # Free subscription
-        free_config = PLAN_CONFIGS[PlanTier.FREE]
+        plan_tier = PlanTier.ULTRA if admin else PlanTier.FREE
+        plan_cfg = PLAN_CONFIGS[plan_tier]
         sub = Subscription(
             user_id=user.id,
-            tier=PlanTier.FREE.value,
+            tier=plan_tier.value,
             status="active",
-            daily_char_limit=free_config["daily_char_limit"],
-            allowed_models=",".join(free_config["allowed_models"]),
+            daily_char_limit=plan_cfg["daily_char_limit"],
+            allowed_models=",".join(plan_cfg["allowed_models"]) if plan_cfg["allowed_models"] != ["all"] else "all",
         )
         db.add(sub)
         await db.commit()
     else:
         if not user.google_id:
             user.google_id = google_id
-            await db.commit()
+        if admin and not user.is_admin:
+            user.is_admin = True
+            user.role = "admin"
+        await db.commit()
 
     return user
 
