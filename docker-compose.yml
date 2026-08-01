@@ -28,11 +28,13 @@ services:
       - voice_studio_data:/app/backend/models
       - voice_studio_uploads:/app/backend/uploads
       - voice_studio_voices:/app/backend/voices
+      - voice_studio_cache:/app/backend/cache
 
 volumes:
   voice_studio_data:
   voice_studio_uploads:
   voice_studio_voices:
+  voice_studio_cache:
 
 networks:
   proxy:
