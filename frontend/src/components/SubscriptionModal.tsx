@@ -124,14 +124,22 @@ export function SubscriptionModal({
             /* Plan Cards */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {plans.map((p) => {
+                const planWeights: Record<string, number> = { free: 0, starter: 1, pro: 2, ultra: 3 };
+                const currentWeight = currentSub ? (planWeights[currentSub.tier] ?? 0) : 0;
+                const thisWeight = planWeights[p.tier] ?? 0;
+                
                 const isCurrent = currentSub?.tier === p.tier;
+                const isSmaller = thisWeight < currentWeight;
+                const isDisabled = (isCurrent || isSmaller) && closable;
                 const isPro = p.tier === "pro";
 
                 return (
                   <div
                     key={p.tier}
-                    className={`relative rounded-2xl border p-5 flex flex-col justify-between transition-all duration-200 hover:scale-[1.02] ${
-                      isPro
+                    className={`relative rounded-2xl border p-5 flex flex-col justify-between transition-all duration-200 ${
+                      isDisabled ? "opacity-50 grayscale hover:scale-100" : "hover:scale-[1.02]"
+                    } ${
+                      isPro && !isDisabled
                         ? "border-orange-500/50 bg-gradient-to-b from-orange-500/10 to-zinc-950 shadow-xl shadow-orange-500/10"
                         : cardBg
                     }`}
@@ -160,23 +168,23 @@ export function SubscriptionModal({
                     </div>
 
                     <button
-                      disabled={isCurrent && closable}
+                      disabled={isDisabled}
                       onClick={() => {
                         if (isCurrent && !closable) {
                           if (onAcknowledge) onAcknowledge();
-                        } else {
+                        } else if (!isDisabled) {
                           handlePayClick(p);
                         }
                       }}
                       className={`mt-6 w-full py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-                        isCurrent && closable
-                          ? "bg-zinc-800 text-zinc-500 cursor-default"
+                        isDisabled
+                          ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                           : isPro || (isCurrent && !closable)
                           ? "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20"
                           : "bg-zinc-800 hover:bg-zinc-700 text-white"
                       }`}
                     >
-                      {isCurrent ? (closable ? "Current Active Plan" : "Continue with " + p.name) : p.price_inr === 0 ? "Default Plan" : "Upgrade via UPI QR"}
+                      {isCurrent ? (closable ? "Current Active Plan" : "Continue with " + p.name) : isSmaller ? "Plan too small" : p.price_inr === 0 ? "Default Plan" : "Upgrade via UPI QR"}
                     </button>
                   </div>
                 );
