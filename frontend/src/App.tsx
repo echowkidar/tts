@@ -420,13 +420,15 @@ export default function App() {
           quality: activeEngine === "voxcpm" ? quality : undefined,
           genSig: qwenGenSig,
         });
+        // Update user character usage stats immediately
+        void sub.refreshSubscription();
       } catch (err: unknown) {
         showError(err, "Synthesis failed");
       } finally {
         setGeneratingId(null);
       }
     },
-    [project, showError, cfgScale, exaggeration, activeEngine, quality, qwenParams],
+    [project, showError, cfgScale, exaggeration, activeEngine, quality, qwenParams, sub],
   );
 
   // ---- playback ----
@@ -651,9 +653,11 @@ export default function App() {
         quality: activeEngine === "voxcpm" ? quality : undefined,
         genSig: qwenGenSig,
       });
+      // Update user character usage stats immediately
+      void sub.refreshSubscription();
     } catch (err) { showError(err, "Synthesis failed"); }
     finally { setGeneratingId(null); }
-  }, [pm.tts, displayedVoices, activeEngine, cfgScale, exaggeration, isSynthLangEngine, project, showError, quality, qwenParams]);
+  }, [pm.tts, displayedVoices, activeEngine, cfgScale, exaggeration, isSynthLangEngine, project, showError, quality, qwenParams, sub]);
 
   // Save the take the browser already holds. Deliberately does NOT go through
   // the server cache: the audio is in hand after generate, so Download works
