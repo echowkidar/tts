@@ -49,3 +49,7 @@ services:
 
 volumes:
   voice_studio_data:
+
+networks:
+  proxy:
+    external: true
