@@ -4,6 +4,11 @@ services:
   voice-studio:
     image: python:3.10-slim
     restart: unless-stopped
+
+    networks:
+      - default
+      - proxy
+
     dns:
       - 8.8.8.8
       - 1.1.1.1
