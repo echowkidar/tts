@@ -1,0 +1,3 @@
+{"op": "load", "device": "cpu"}
+{"op": "synth", "mode": "auto", "text": "Hello world", "out_wav": "test.wav"}
+{"op": "shutdown"}
