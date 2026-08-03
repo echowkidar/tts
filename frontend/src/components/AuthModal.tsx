@@ -169,10 +169,11 @@ export function AuthModal({ isOpen, onClose, onLogin, onRegister, onGoogleLogin,
                   <input
                     type="text"
                     required
-                    placeholder="Enter your full name"
+                    placeholder={tab === "register" ? "Use Google Sign-In" : "Enter your full name"}
                     value={fullName}
+                    disabled={tab === "register"}
                     onChange={(e) => setFullName(e.target.value)}
-                    className={`w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border ${inputBg} ${focusRing}`}
+                    className={`w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border ${inputBg} ${focusRing} ${tab === "register" ? "opacity-50 cursor-not-allowed" : ""}`}
                   />
                 </div>
               </div>
@@ -185,10 +186,11 @@ export function AuthModal({ isOpen, onClose, onLogin, onRegister, onGoogleLogin,
                 <input
                   type="email"
                   required
-                  placeholder="name@example.com"
+                  placeholder={tab === "register" ? "Use Google Sign-In" : "name@example.com"}
                   value={email}
+                  disabled={tab === "register"}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border ${inputBg} ${focusRing}`}
+                  className={`w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border ${inputBg} ${focusRing} ${tab === "register" ? "opacity-50 cursor-not-allowed" : ""}`}
                 />
               </div>
             </div>
@@ -200,19 +202,20 @@ export function AuthModal({ isOpen, onClose, onLogin, onRegister, onGoogleLogin,
                 <input
                   type="password"
                   required
-                  placeholder="••••••••"
+                  placeholder={tab === "register" ? "Use Google Sign-In" : "••••••••"}
                   value={password}
+                  disabled={tab === "register"}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border ${inputBg} ${focusRing}`}
+                  className={`w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border ${inputBg} ${focusRing} ${tab === "register" ? "opacity-50 cursor-not-allowed" : ""}`}
                 />
               </div>
             </div>
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || tab === "register"}
               className={`w-full mt-2 py-3 px-4 rounded-xl font-medium text-sm text-white bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 ${
-                loading ? "opacity-75 cursor-not-allowed" : ""
+                loading || tab === "register" ? "opacity-75 cursor-not-allowed" : ""
               }`}
             >
               {loading ? (
