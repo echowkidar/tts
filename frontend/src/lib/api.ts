@@ -481,10 +481,11 @@ export async function synthesizeWav(
     let detail = res.statusText;
     try {
       const body = (await res.json()) as { detail?: string; code?: string };
-      if (body.detail) detail = body.detail;
+      if (body.detail) detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
     } catch {
       // ignore
     }
+    if (!detail) detail = `Synthesis failed (HTTP ${res.status})`;
     throw new ApiError(detail, res.status);
   }
 

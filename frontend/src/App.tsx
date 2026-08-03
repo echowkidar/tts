@@ -286,7 +286,7 @@ export default function App() {
   // Auto-dismiss toast
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4500);
+    const t = setTimeout(() => setToast(null), toast.kind === "error" ? 10000 : 4500);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -1130,7 +1130,7 @@ export default function App() {
 
               {toast && (
                 <div
-                  className={`mb-6 p-3 rounded-lg border text-sm ${
+                  className={`mb-6 p-3 rounded-lg border text-sm flex items-start justify-between gap-3 ${
                     toast.kind === "error"
                       ? isDark
                         ? "bg-red-900/30 border-red-600/40 text-red-200"
@@ -1140,7 +1140,8 @@ export default function App() {
                         : "bg-amber-50 border-amber-200 text-amber-800"
                   }`}
                 >
-                  {toast.text}
+                  <span className="break-all">{toast.text || (toast.kind === "error" ? "An error occurred. Check browser console for details." : "")}</span>
+                  <button type="button" onClick={() => setToast(null)} className="shrink-0 opacity-60 hover:opacity-100 text-lg leading-none">✕</button>
                 </div>
               )}
 
