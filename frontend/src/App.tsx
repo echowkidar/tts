@@ -639,7 +639,6 @@ export default function App() {
         languageId: isSynthLangEngine ? (pm.tts.language ?? undefined) : undefined,
         ...(activeEngine === "voxcpm" ? { inferenceSteps: QUALITY_TIMESTEPS[quality] } : {}),
         ...qwenSynthOpts,
-        forceRegenerate: true,
       });
       project.cacheAudio(TTS_SEG_ID, {
         audioData,
