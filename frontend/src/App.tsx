@@ -143,7 +143,6 @@ export default function App() {
     }
   }, [auth.user?.id]);
 
-  const requireLogin = !auth.loading && !auth.isLoggedIn;
   const hasAcked = auth.user?.id ? !!ackedPlans[auth.user.id] : false;
   const requireSub = !auth.loading && auth.isLoggedIn && !sub.loading && !hasAcked;
   
@@ -158,12 +157,10 @@ export default function App() {
   }, [auth.user]);
 
   useEffect(() => {
-    if (requireLogin) {
-      setAuthModalOpen(true);
-    } else if (requireSub) {
+    if (requireSub) {
       setSubModalOpen(true);
     }
-  }, [requireLogin, requireSub]);
+  }, [requireSub]);
 
   const handleSubAck = useCallback(() => {
     if (auth.user?.id) {
@@ -1348,7 +1345,7 @@ export default function App() {
         onRegister={auth.register}
         onGoogleLogin={auth.googleLogin}
         isDark={isDark}
-        closable={!requireLogin}
+        closable={true}
       />
       <SubscriptionModal
         isOpen={subModalOpen}
