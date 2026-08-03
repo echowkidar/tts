@@ -639,6 +639,7 @@ export default function App() {
         languageId: isSynthLangEngine ? (pm.tts.language ?? undefined) : undefined,
         ...(activeEngine === "voxcpm" ? { inferenceSteps: QUALITY_TIMESTEPS[quality] } : {}),
         ...qwenSynthOpts,
+        forceRegenerate: true,
       });
       project.cacheAudio(TTS_SEG_ID, {
         audioData,
@@ -980,7 +981,12 @@ export default function App() {
             pm.mode === "tts" ? pm.tts.voiceId : pm.mode === "dub" ? pm.dub.voiceId : undefined
           }
           onSelectVoice={
-            pm.mode === "tts" ? pm.setTtsVoice : pm.mode === "dub" ? pm.setDubVoice : undefined
+            pm.mode === "tts"
+              ? (voiceId: string) => {
+                  pm.setTtsVoice(voiceId);
+                  project.invalidateCache(TTS_SEG_ID);
+                }
+              : pm.mode === "dub" ? pm.setDubVoice : undefined
           }
         />
       )}
