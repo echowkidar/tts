@@ -370,7 +370,6 @@ export default function App() {
     async (segmentId: string, options: { forceRegenerate?: boolean } = {}) => {
       if (!auth.isLoggedIn) {
         setAuthModalOpen(true);
-        showError("Please sign in or create a free account to generate speech.", "Sign In Required");
         return;
       }
       const seg = project.segments.find((s) => s.id === segmentId);
@@ -609,7 +608,6 @@ export default function App() {
   const generateTts = useCallback(async () => {
     if (!auth.isLoggedIn) {
       setAuthModalOpen(true);
-      showError("Please sign in or create a free account to generate speech.", "Sign In Required");
       return;
     }
     if (!pm.tts.text.trim()) return;
@@ -1039,6 +1037,8 @@ export default function App() {
               pm.setTtsText(text);
               pm.setMode("tts");
             }}
+            isLoggedIn={auth.isLoggedIn}
+            onAuthRequired={() => setAuthModalOpen(true)}
           />
         ) : pm.mode === "dub" ? (
           <DubEditor
@@ -1055,6 +1055,8 @@ export default function App() {
             activeTranslator={translateStatus?.active ?? "m2m100"}
             translatorDownloaded={activeTranslatorModel?.downloaded ?? false}
             onDownloadWeights={(n) => setDownloadEngine(n)}
+            isLoggedIn={auth.isLoggedIn}
+            onAuthRequired={() => setAuthModalOpen(true)}
           />
         ) : pm.mode === "tts" ? (
           <div className="flex-1 overflow-y-auto px-6 py-4">

@@ -7,7 +7,11 @@ from fastapi.responses import JSONResponse
 
 from ..core.exceptions import BuiltInVoiceProtected, VoiceInvalid, VoiceNotFound
 from ..services.voices import VoiceInfo, VoiceRegistry
-from .deps import get_asr_service, get_voice_registry
+from .deps import get_asr_service, get_voice_registry, get_current_user_optional
+from sqlalchemy.ext.asyncio import AsyncSession
+from ..auth.database import get_db
+from ..auth.models import User, PlanTier
+from ..auth.service import get_user_subscription
 from .schemas import (
     UploadVoiceResponse,
     VoiceInfoModel,
@@ -51,10 +55,22 @@ async def upload_voice(
     gender: str | None = Form(default=None, description="'man', 'woman', or 'nonbinary'"),
     language: str | None = Form(default=None, description="Language tag, e.g. 'en'"),
     reg: VoiceRegistry = Depends(get_voice_registry),
+    current_user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
 ) -> UploadVoiceResponse:
     raw = await file.read()
     if not raw:
         raise HTTPException(status_code=400, detail="empty file")
+
+    # Check upload limit based on plan
+    is_ultra = False
+    if current_user:
+        sub = await get_user_subscription(db, current_user.id)
+        if sub.tier == PlanTier.ULTRA.value:
+            is_ultra = True
+            
+    if not is_ultra and len(raw) > 1 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 1MB. Upgrade to Ultra for unlimited uploads.")
 
     try:
         info = reg.save_upload(

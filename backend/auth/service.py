@@ -176,6 +176,12 @@ async def check_usage_and_limit(
     # Unlimited tier
     if sub.daily_char_limit == -1:
         return True, "OK"
+        
+    # Check per-generation limit based on plan
+    if sub.tier == PlanTier.FREE.value and char_count > 300:
+        return False, "Free plan is limited to 300 characters per generation. Please upgrade for longer inputs."
+    if sub.tier in [PlanTier.STARTER.value, PlanTier.PRO.value] and char_count > 500:
+        return False, f"{sub.tier.capitalize()} plan is limited to 500 characters per generation. Please upgrade to Ultra for unlimited inputs."
 
     # Check daily limit
     chars_used_today = await get_today_usage(db, user_id)

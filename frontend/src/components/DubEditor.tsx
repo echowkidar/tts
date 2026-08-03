@@ -40,6 +40,8 @@ interface Props {
   translatorDownloaded: boolean;
   /** Opens the download dialog for a model name (whisper or a translator). */
   onDownloadWeights: (name: string) => void;
+  isLoggedIn: boolean;
+  onAuthRequired: () => void;
 }
 
 const ACCEPT = ".wav,.mp3,.flac,.ogg,.m4a,.webm";
@@ -62,6 +64,8 @@ export function DubEditor({
   activeTranslator,
   translatorDownloaded,
   onDownloadWeights,
+  isLoggedIn,
+  onAuthRequired,
 }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState<null | "transcribe" | "dub">(null);
@@ -109,6 +113,10 @@ export function DubEditor({
   }, [busy]);
 
   const runTranscribe = useCallback(async () => {
+    if (!isLoggedIn) {
+      onAuthRequired();
+      return;
+    }
     if (!file) return;
     setBusy("transcribe");
     setError(null);
@@ -129,6 +137,10 @@ export function DubEditor({
   }, [file, onChange]);
 
   const runDub = useCallback(async () => {
+    if (!isLoggedIn) {
+      onAuthRequired();
+      return;
+    }
     if (buffer.segments.length === 0) return;
     if (needsVoice && !activeVoice) return;
     // instruct carries the design/style/clone-style prompt (empty = omitted).

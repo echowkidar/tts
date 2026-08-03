@@ -98,10 +98,11 @@ interface BodyProps {
   busy: boolean;
   onClear: () => void;
   onDelete: (hash: string) => void;
+  isAdmin?: boolean;
 }
 
 /** Reusable cache list body — rendered as a Recent generations playlist. */
-export function CacheBody({ isDark, data, busy, onClear, onDelete }: BodyProps) {
+export function CacheBody({ isDark, data, busy, onClear, onDelete, isAdmin }: BodyProps) {
   const confirm = useConfirm();
   const [playingHash, setPlayingHash] = useState<string | null>(null);
   const [detail, setDetail] = useState<CacheEntryInfo | null>(null);
@@ -226,19 +227,21 @@ export function CacheBody({ isDark, data, busy, onClear, onDelete }: BodyProps) 
               <FolderOpen className="w-4 h-4" />
             </button>
           )}
-          <button
-            type="button"
-            onClick={handleClear}
-            disabled={busy || data.entry_count === 0}
-            title="Clear all"
-            className={`p-1 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              isDark
-                ? "text-zinc-400 hover:text-red-400"
-                : "text-gray-600 hover:text-red-700"
-            } ${focusRing}`}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={busy || data.entry_count === 0}
+              title="Clear all"
+              className={`p-1 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                isDark
+                  ? "text-zinc-400 hover:text-red-400"
+                  : "text-gray-600 hover:text-red-700"
+              } ${focusRing}`}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -321,19 +324,21 @@ export function CacheBody({ isDark, data, busy, onClear, onDelete }: BodyProps) 
                     >
                       <Download className="w-3.5 h-3.5" />
                     </button>
-                    <button
-                      type="button"
-                      onClick={(ev) => void handleDelete(ev, e.hash)}
-                      disabled={busy}
-                      className={`p-1 rounded transition-colors ${
-                        isDark
-                          ? "text-zinc-400 hover:text-red-400"
-                          : "text-gray-600 hover:text-red-700"
-                      } ${focusRing}`}
-                      title="Delete this entry"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={(ev) => void handleDelete(ev, e.hash)}
+                        disabled={busy}
+                        className={`p-1 rounded transition-colors ${
+                          isDark
+                            ? "text-zinc-400 hover:text-red-400"
+                            : "text-gray-600 hover:text-red-700"
+                        } ${focusRing}`}
+                        title="Delete this entry"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </li>
               );

@@ -15,9 +15,10 @@ interface Props {
   translateLanguages: EngineLanguage[];
   activeTranslator: string;
   translatorDownloaded: boolean;
-  /** Opens the download dialog for a model name (whisper or a translator). */
   onDownloadWeights: (name: string) => void;
   onSendToTts: (text: string) => void;
+  isLoggedIn: boolean;
+  onAuthRequired: () => void;
 }
 
 const ACCEPT = ".wav,.mp3,.flac,.ogg,.m4a,.webm";
@@ -41,6 +42,8 @@ export function TranscribeEditor({
   translatorDownloaded,
   onDownloadWeights,
   onSendToTts,
+  isLoggedIn,
+  onAuthRequired,
 }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -52,6 +55,10 @@ export function TranscribeEditor({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const runTranslate = useCallback(async () => {
+    if (!isLoggedIn) {
+      onAuthRequired();
+      return;
+    }
     if (!buffer.targetLanguage || buffer.segments.length === 0) return;
     setTranslating(true);
     setError(null);
@@ -81,6 +88,10 @@ export function TranscribeEditor({
   }, [busy]);
 
   const run = useCallback(async () => {
+    if (!isLoggedIn) {
+      onAuthRequired();
+      return;
+    }
     if (!file) return;
     setBusy(true);
     setError(null);

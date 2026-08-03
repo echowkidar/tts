@@ -1,4 +1,4 @@
-import { Check, Loader2, Play, RefreshCw, Square, Trash2 } from "lucide-react";
+import { Check, Loader2, Play, RefreshCw, Square, Trash2, Sparkles } from "lucide-react";
 import { Download } from "lucide-react";
 import type { Segment, Speaker } from "@/types/models";
 import { focusRing } from "@/lib/theme";

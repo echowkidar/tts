@@ -125,14 +125,6 @@ export function VoiceLibrary({
                 <Volume2 className={`w-4 h-4 shrink-0 ${rowIcon(isSelected)}`} />
                 <span className="flex-1 truncate">{v.name}</span>
                 {v.gender && <span className={`text-xs ${rowMeta(isSelected)}`}>{v.gender}</span>}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setEditingVoice(v); }}
-                  className={`p-1 ${iconBtn} ${focusRing}`}
-                  title="Edit name / gender / language"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
               </li>
               );
             })}

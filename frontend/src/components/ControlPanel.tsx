@@ -286,6 +286,7 @@ export function ControlPanel({
             busy={cacheBusy}
             onClear={onCacheClear}
             onDelete={onCacheDelete}
+            isAdmin={isAdmin}
           />
           <button
             type="button"
