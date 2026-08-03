@@ -135,31 +135,55 @@ class _Worker:
         if req.get("speed") is not None:
             ctl["speed"] = float(req["speed"])
         t0 = time.perf_counter()
-        try:
-            if mode == "clone":
-                ref = req.get("ref_audio")
-                if not ref:
-                    return {"ok": False, "error": "clone mode requires ref_audio"}
-                gkwargs = {"ref_audio": ref}
-                if req.get("ref_text"):
-                    gkwargs["ref_text"] = req["ref_text"]
-                audio = self._model.generate(text, **gkwargs, **ctl)
-            elif mode == "design":
-                audio = self._model.generate(text, instruct=req.get("instruct") or "", **ctl)
-            else:  # auto
-                audio = self._model.generate(text, **ctl)
-        except Exception as exc:  # noqa: BLE001
-            return {"ok": False, "error": f"generate failed: {exc}"}
-        inference_ms = int((time.perf_counter() - t0) * 1000)
-
+        import re
         import numpy as np
 
-        # OmniVoice returns a list of np.ndarray (one per utterance); take the
-        # first. Tolerate a bare array too.
-        arr = audio[0] if isinstance(audio, (list, tuple)) else audio
-        if hasattr(arr, "detach"):
-            arr = arr.detach().cpu().float().numpy()
-        arr = np.asarray(arr, dtype=np.float32).reshape(-1)
+        try:
+            # Split text into manageable chunks to avoid OOM or context limits
+            raw_chunks = re.split(r'([.!?\n]+)', text)
+            chunks = []
+            current = ""
+            for i in range(0, len(raw_chunks), 2):
+                piece = raw_chunks[i]
+                punct = raw_chunks[i+1] if i+1 < len(raw_chunks) else ""
+                current += piece + punct
+                if len(current) > 150 or punct.strip():
+                    if current.strip():
+                        chunks.append(current.strip())
+                    current = ""
+            if current.strip():
+                chunks.append(current.strip())
+            
+            if not chunks:
+                chunks = [text]
+
+            audio_arrays = []
+            for chunk in chunks:
+                if mode == "clone":
+                    ref = req.get("ref_audio")
+                    if not ref:
+                        return {"ok": False, "error": "clone mode requires ref_audio"}
+                    gkwargs = {"ref_audio": ref}
+                    if req.get("ref_text"):
+                        gkwargs["ref_text"] = req["ref_text"]
+                    chunk_audio = self._model.generate(chunk, **gkwargs, **ctl)
+                elif mode == "design":
+                    chunk_audio = self._model.generate(chunk, instruct=req.get("instruct") or "", **ctl)
+                else:  # auto
+                    chunk_audio = self._model.generate(chunk, **ctl)
+                
+                arr = chunk_audio[0] if isinstance(chunk_audio, (list, tuple)) else chunk_audio
+                if hasattr(arr, "detach"):
+                    arr = arr.detach().cpu().float().numpy()
+                arr = np.asarray(arr, dtype=np.float32).reshape(-1)
+                audio_arrays.append(arr)
+                
+            arr = np.concatenate(audio_arrays)
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": f"generate failed: {exc}"}
+            
+        inference_ms = int((time.perf_counter() - t0) * 1000)
+
         try:
             _write_wav_int16(out_wav, arr, self.SAMPLE_RATE)
         except Exception as exc:  # noqa: BLE001

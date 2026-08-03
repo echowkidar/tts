@@ -54,6 +54,9 @@ async function jsonOrThrow<T>(res: Response): Promise<T> {
     } catch {
       // ignore JSON parse errors; fall through with statusText
     }
+    if (!detail) {
+      detail = `HTTP ${res.status} Error`;
+    }
     throw new ApiError(detail, res.status);
   }
   return (await res.json()) as T;
