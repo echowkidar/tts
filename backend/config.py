@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     chatterbox_watermark: bool = True
 
     omnivoice_model_id: str = "k2-fsa/OmniVoice"
-    omnivoice_num_step: int = 16
+    omnivoice_num_step: int = 8
 
     voxcpm_model_id: str = "openbmb/VoxCPM2"
     # Diffusion inference timesteps (5 fast … 25 high quality). Default 10.

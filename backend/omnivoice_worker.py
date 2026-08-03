@@ -132,6 +132,8 @@ class _Worker:
         ctl: dict = {}
         if req.get("num_step") is not None:
             ctl["num_step"] = int(req["num_step"])
+        else:
+            ctl["num_step"] = 8
         if req.get("speed") is not None:
             ctl["speed"] = float(req["speed"])
         t0 = time.perf_counter()
