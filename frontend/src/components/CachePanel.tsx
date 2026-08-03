@@ -119,7 +119,7 @@ export function CacheBody({ isDark, data, busy, onClear, onDelete, isAdmin }: Bo
     };
   }, []);
 
-  const handleRowPlay = (e: React.MouseEvent, entry: CacheEntryInfo) => {
+  const handleRowPlay = async (e: React.MouseEvent, entry: CacheEntryInfo) => {
     e.stopPropagation();
     const audio = audioRef.current;
     if (!audio) return;
@@ -128,13 +128,17 @@ export function CacheBody({ isDark, data, busy, onClear, onDelete, isAdmin }: Bo
       audio.pause();
       setPlayingHash(null);
     } else {
-      audio.src = cacheAudioUrl(entry.hash);
-      audio.currentTime = 0;
-      void audio.play().then(() => {
+      try {
         setPlayingHash(entry.hash);
-      }).catch(() => {
+        const res = await fetch(cacheAudioUrl(entry.hash));
+        if (!res.ok) throw new Error("Audio fetch failed");
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        audio.src = objectUrl;
+        await audio.play();
+      } catch {
         setPlayingHash(null);
-      });
+      }
     }
   };
 

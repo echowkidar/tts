@@ -7,11 +7,13 @@ running it on the event loop would block every other request.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions import BackendError
@@ -58,44 +60,35 @@ async def synthesize(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=msg,
             )
-    """Synthesize text to speech.
 
-    Pass a script in `text` and the list of speakers in `speakers`. If `text`
-    doesn't already contain `Speaker N:` tags, it's wrapped as a single-speaker
-    script using `speakers[0]`. The 1.5B model supports up to 4 speakers.
-
-    By default returns `audio/wav` binary. Pass `?response_format=base64` to get
-    a JSON envelope (useful when the client cannot handle binary responses).
-    """
     try:
-        result = svc.synthesize(
-            SynthRequest(
-                text=body.text,
-                speakers=[
-                    ServiceSpeaker(
-                        name=sp.name,
-                        voice_id=sp.voice,
-                        voice_mode=sp.voice_mode,
-                        instruct=sp.instruct,
-                    )
-                    for sp in body.speakers
-                ],
-                cfg_scale=body.cfg_scale if body.cfg_scale is not None else svc.default_cfg_scale,
-                inference_steps=body.inference_steps,
-                disable_prefill=body.disable_prefill,
-                force_regenerate=body.force_regenerate,
-                engine=body.engine,
-                speed=body.speed,
-                cfg_weight=body.cfg_weight,
-                exaggeration=body.exaggeration,
-                language_id=body.language_id,
-                temperature=body.temperature,
-                top_p=body.top_p,
-                top_k=body.top_k,
-                repetition_penalty=body.repetition_penalty,
-                seed=body.seed,
-            )
+        req = SynthRequest(
+            text=body.text,
+            speakers=[
+                ServiceSpeaker(
+                    name=sp.name,
+                    voice_id=sp.voice,
+                    voice_mode=sp.voice_mode,
+                    instruct=sp.instruct,
+                )
+                for sp in body.speakers
+            ],
+            cfg_scale=body.cfg_scale if body.cfg_scale is not None else svc.default_cfg_scale,
+            inference_steps=body.inference_steps,
+            disable_prefill=body.disable_prefill,
+            force_regenerate=body.force_regenerate,
+            engine=body.engine,
+            speed=body.speed,
+            cfg_weight=body.cfg_weight,
+            exaggeration=body.exaggeration,
+            language_id=body.language_id,
+            temperature=body.temperature,
+            top_p=body.top_p,
+            top_k=body.top_k,
+            repetition_penalty=body.repetition_penalty,
+            seed=body.seed,
         )
+        result = await asyncio.to_thread(svc.synthesize, req)
     except BackendError:
         # Domain errors: let the global handler in app.py turn them into the
         # proper JSON shape (with `code`).
