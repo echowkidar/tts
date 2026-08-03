@@ -139,26 +139,65 @@ class _Worker:
         import numpy as np
 
         try:
-            # Split text into manageable chunks to avoid OOM or context limits
-            raw_chunks = re.split(r'([.!?\n]+)', text)
+            # Split text into manageable chunks for OmniVoice.
+            # Handles: English (.!?), Hindi (।), Urdu (۔?!), newlines.
+            # Hard cap: any sentence longer than 200 chars is forcibly split.
+            TERMINATORS = r'([.!?।۔\n]+)'
+            MAX_CHUNK = 200
+
+            raw_parts = re.split(TERMINATORS, text)
             chunks = []
             current = ""
-            for i in range(0, len(raw_chunks), 2):
-                piece = raw_chunks[i]
-                punct = raw_chunks[i+1] if i+1 < len(raw_chunks) else ""
-                current += piece + punct
-                if len(current) > 150 or punct.strip():
+            for i in range(0, len(raw_parts), 2):
+                piece = raw_parts[i]
+                sep = raw_parts[i + 1] if i + 1 < len(raw_parts) else ""
+                sentence = piece + sep
+                # If adding this sentence keeps us under the limit, accumulate.
+                if len(current) + len(sentence) <= MAX_CHUNK:
+                    current += sentence
+                else:
+                    # Flush what we have
                     if current.strip():
-                        chunks.append(current.strip())
-                    current = ""
+                        # If current itself exceeds limit, hard-split by words
+                        if len(current) > MAX_CHUNK:
+                            words = current.split()
+                            buf = ""
+                            for w in words:
+                                if buf and len(buf) + 1 + len(w) > MAX_CHUNK:
+                                    chunks.append(buf.strip())
+                                    buf = w
+                                else:
+                                    buf = (buf + " " + w).strip()
+                            if buf.strip():
+                                chunks.append(buf.strip())
+                        else:
+                            chunks.append(current.strip())
+                    current = sentence
             if current.strip():
-                chunks.append(current.strip())
-            
+                if len(current) > MAX_CHUNK:
+                    words = current.split()
+                    buf = ""
+                    for w in words:
+                        if buf and len(buf) + 1 + len(w) > MAX_CHUNK:
+                            chunks.append(buf.strip())
+                            buf = w
+                        else:
+                            buf = (buf + " " + w).strip()
+                    if buf.strip():
+                        chunks.append(buf.strip())
+                else:
+                    chunks.append(current.strip())
+
+            # Remove empty chunks
+            chunks = [c for c in chunks if c.strip()]
             if not chunks:
                 chunks = [text]
 
+            _log(f"[omnivoice-worker] split into {len(chunks)} chunk(s)")
+
             audio_arrays = []
-            for chunk in chunks:
+            for idx, chunk in enumerate(chunks):
+                _log(f"[omnivoice-worker] chunk {idx+1}/{len(chunks)} ({len(chunk)} chars)")
                 if mode == "clone":
                     ref = req.get("ref_audio")
                     if not ref:
@@ -171,13 +210,13 @@ class _Worker:
                     chunk_audio = self._model.generate(chunk, instruct=req.get("instruct") or "", **ctl)
                 else:  # auto
                     chunk_audio = self._model.generate(chunk, **ctl)
-                
+
                 arr = chunk_audio[0] if isinstance(chunk_audio, (list, tuple)) else chunk_audio
                 if hasattr(arr, "detach"):
                     arr = arr.detach().cpu().float().numpy()
                 arr = np.asarray(arr, dtype=np.float32).reshape(-1)
                 audio_arrays.append(arr)
-                
+
             arr = np.concatenate(audio_arrays)
         except Exception as exc:  # noqa: BLE001
             return {"ok": False, "error": f"generate failed: {exc}"}
