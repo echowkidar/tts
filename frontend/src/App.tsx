@@ -637,6 +637,7 @@ export default function App() {
         cfgWeight: isChatterbox ? cfgScale : null,
         exaggeration: isChatterbox ? exaggeration : null,
         languageId: isSynthLangEngine ? (pm.tts.language ?? undefined) : undefined,
+        forceRegenerate: true,
         ...(activeEngine === "voxcpm" ? { inferenceSteps: QUALITY_TIMESTEPS[quality] } : {}),
         ...qwenSynthOpts,
       });
