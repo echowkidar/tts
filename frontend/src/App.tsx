@@ -988,6 +988,11 @@ export default function App() {
                 }
               : pm.mode === "dub" ? pm.setDubVoice : undefined
           }
+          disabled={
+            pm.mode === "tts" &&
+            activeEngineInfo?.supports_voice_modes === true &&
+            (pm.tts.omnivoiceMode === "design" || pm.tts.omnivoiceMode === "auto")
+          }
         />
       )}
 

@@ -20,6 +20,7 @@ interface Props {
   supportsVoiceCloning: boolean;
   selectedVoiceId?: string | null;
   onSelectVoice?: (voiceId: string) => void;
+  disabled?: boolean;
 }
 
 export function VoiceLibrary({
@@ -33,6 +34,7 @@ export function VoiceLibrary({
   supportsVoiceCloning,
   selectedVoiceId,
   onSelectVoice,
+  disabled = false,
 }: Props) {
   const confirm = useConfirm();
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -106,8 +108,14 @@ export function VoiceLibrary({
       />
 
       <div className="flex-1 overflow-y-auto p-2.5 space-y-4">
-        {/* Built-in voices */}
-        <section className="p-3 dark:bg-zinc-900 dark:border-zinc-800 bg-gray-100/80 border border-gray-200 rounded-lg">
+        {disabled && (
+          <div className="text-xs text-center text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 p-2 rounded-md">
+            Voice selection is ignored in Design / Auto mode.
+          </div>
+        )}
+        <div className={disabled ? "opacity-50 pointer-events-none grayscale transition-all" : "transition-all"}>
+          {/* Built-in voices */}
+          <section className="p-3 dark:bg-zinc-900 dark:border-zinc-800 bg-gray-100/80 border border-gray-200 rounded-lg">
           <h2 className={`text-xs font-semibold uppercase tracking-wide mb-2 ${heading}`}>
             Built-in voices
           </h2>
