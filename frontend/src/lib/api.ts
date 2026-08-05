@@ -432,14 +432,15 @@ export async function deleteVoice(voiceId: string): Promise<void> {
 }
 
 /**
- * Synthesize text → speech, returning the WAV bytes as an ArrayBuffer.
- * Backend may return either audio/wav (default) or JSON (response_format=base64).
+ * Synthesize text to speech using the async job system.
  *
- * @param text       Script text. If it doesn't contain `Speaker N:` lines, the
- *                   backend wraps it as a single-speaker script using speakers[0].
- * @param speakers   Ordered list of speakers in the script. Each entry has a
- *                   `name` (used in `Speaker <name>: ...` tags after normalization)
- *                   and a `voice` (Voice.id to use for that speaker's reference audio).
+ * Flow:
+ * 1. POST /api/synthesize/async → starts a background job, returns {job_id}
+ * 2. Poll GET /api/synthesize/jobs/{job_id} every 2s until status=done
+ * 3. Fetch audio from GET /api/synthesize/jobs/{job_id}/audio
+ *
+ * This eliminates ALL proxy timeout issues (504/524) because no single
+ * HTTP request is held open longer than a few hundred ms.
  */
 export async function synthesizeWav(
   text: string,
@@ -458,7 +459,8 @@ export async function synthesizeWav(
     seed?: number | null;
   } = {},
 ): Promise<{ audioData: ArrayBuffer; sampleRate: number; durationSec: number; inferenceMs: number; cacheHit: boolean; cacheHash: string | null }> {
-  const res = await fetch(`${API_BASE}/synthesize`, {
+  // Step 1: Start the async job
+  const startRes = await fetch(`${API_BASE}/synthesize/async`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify({
@@ -477,46 +479,63 @@ export async function synthesizeWav(
       ...(options.forceRegenerate ? { force_regenerate: true } : {}),
     }),
   });
-  if (!res.ok) {
-    let detail = res.statusText;
+  if (!startRes.ok) {
+    let detail = startRes.statusText;
     try {
-      const body = (await res.json()) as { detail?: string; code?: string };
+      const body = (await startRes.json()) as { detail?: string };
       if (body.detail) detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
-    } catch {
-      // ignore
+    } catch { /* ignore */ }
+    if (!detail) detail = `Synthesis failed (HTTP ${startRes.status})`;
+    throw new ApiError(detail, startRes.status);
+  }
+  const { job_id } = (await startRes.json()) as { job_id: string };
+
+  // Step 2: Poll for completion (every 2 seconds, up to 10 minutes)
+  const POLL_INTERVAL_MS = 2000;
+  const MAX_POLLS = 300; // 10 minutes max
+  for (let i = 0; i < MAX_POLLS; i++) {
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    const pollRes = await fetch(`${API_BASE}/synthesize/jobs/${job_id}`, {
+      headers: { ...getAuthHeaders() },
+    });
+    if (!pollRes.ok) {
+      throw new ApiError(`Job polling failed (HTTP ${pollRes.status})`, pollRes.status);
     }
-    if (!detail) detail = `Synthesis failed (HTTP ${res.status})`;
-    throw new ApiError(detail, res.status);
-  }
-
-  const contentType = res.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    const payload = (await res.json()) as SynthBase64Response;
-    const binary = atob(payload.audio_b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return {
-      audioData: bytes.buffer,
-      sampleRate: payload.sample_rate,
-      durationSec: payload.duration_sec,
-      inferenceMs: payload.inference_ms,
-      cacheHit: res.headers.get("X-Cache") === "hit",
-      cacheHash: res.headers.get("X-Cache-Hash"),
+    const jobStatus = (await pollRes.json()) as {
+      status: string;
+      error?: string;
+      sample_rate?: number;
+      duration_sec?: number;
+      inference_ms?: number;
+      cache_hash?: string;
+      cache_hit?: boolean;
     };
+
+    if (jobStatus.status === "error") {
+      throw new ApiError(jobStatus.error ?? "Synthesis failed", 500);
+    }
+    if (jobStatus.status === "done") {
+      // Step 3: Fetch the audio
+      const audioRes = await fetch(`${API_BASE}/synthesize/jobs/${job_id}/audio`, {
+        headers: { ...getAuthHeaders() },
+      });
+      if (!audioRes.ok) {
+        throw new ApiError(`Audio fetch failed (HTTP ${audioRes.status})`, audioRes.status);
+      }
+      const audioData = await audioRes.arrayBuffer();
+      return {
+        audioData,
+        sampleRate: jobStatus.sample_rate ?? 24000,
+        durationSec: jobStatus.duration_sec ?? 0,
+        inferenceMs: jobStatus.inference_ms ?? 0,
+        cacheHit: jobStatus.cache_hit ?? false,
+        cacheHash: jobStatus.cache_hash ?? null,
+      };
+    }
+    // status is "pending" or "running" — keep polling
   }
 
-  const audioData = await res.arrayBuffer();
-  const sampleRate = Number(res.headers.get("X-Sample-Rate") ?? "24000");
-  const durationSec = Number(res.headers.get("X-Audio-Duration-Sec") ?? "0");
-  const inferenceMs = Number(res.headers.get("X-Inference-Ms") ?? "0");
-  return {
-    audioData,
-    sampleRate,
-    durationSec,
-    inferenceMs,
-    cacheHit: res.headers.get("X-Cache") === "hit",
-    cacheHash: res.headers.get("X-Cache-Hash"),
-  };
+  throw new ApiError("Synthesis timed out after 10 minutes", 504);
 }
 
 export interface DownloadSegmentPayload {

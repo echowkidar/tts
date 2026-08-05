@@ -283,6 +283,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.asr_service = asr_service
     app.state.translate_service = translate_service
     app.state.dub_service = dub_service
+
+    # Async synthesis job store (in-memory, auto-cleanup after 10 min)
+    from .services.job_store import JobStore
+    app.state.job_store = JobStore(max_age_sec=600)
     app.state.engine_installers = {
         "chatterbox": ChatterboxInstaller(),
         "omnivoice": EngineEnvInstaller("install-omnivoice"),
