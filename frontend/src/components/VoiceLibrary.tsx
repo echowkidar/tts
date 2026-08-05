@@ -211,6 +211,7 @@ export function VoiceLibrary({
           </ul>
         </section>
         )}
+        </div>
       </div>
 
       {/* Footer — appearance + backend info, pinned to the bottom of the sidebar */}
