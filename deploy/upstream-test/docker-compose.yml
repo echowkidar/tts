@@ -1,0 +1,57 @@
+# Phase 0 — debpalash/VoiceStudio v0.5.7 test stack
+#
+# Portainer → Stacks → Add stack → Repository:
+#   Repository URL : https://github.com/echowkidar/tts
+#   Reference      : refs/heads/phase0-upstream-test
+#   Compose path   : deploy/upstream-test/docker-compose.yml
+#
+# Alag container, alag port, alag volume — aapka maujooda voice-studio stack nahi chhedta.
+#
+# Portainer "Environment variables" mein set karein:
+#   OMNIVOICE_API_KEY = lamba random string (admin/settings ke liye zaroori)
+#   HF_TOKEN          = (optional) HuggingFace token
+#   VS_TEST_PORT      = (optional) default 3905
+#
+# GPU server hai to neeche "deploy:" block uncomment karein (NVIDIA Container Toolkit chahiye).
+
+services:
+  voicestudio-upstream-test:
+    image: ghcr.io/debpalash/voicestudio:0.5.7   # GHCR par verified (= sha-beeaae0)
+    restart: "no"
+    networks:
+      - default
+      - proxy
+    ports:
+      - "${VS_TEST_PORT:-3905}:3900"
+    volumes:
+      - vs_upstream_test_data:/app/omnivoice_data
+    environment:
+      - HF_HOME=/app/omnivoice_data/huggingface
+      - HF_TOKEN=${HF_TOKEN:-}
+      - OMNIVOICE_DATA_DIR=/app/omnivoice_data
+      - PYTHONPATH=/app/backend
+      - PYTHONUNBUFFERED=1
+      - OMNIVOICE_SERVER_MODE=1
+      - OMNIVOICE_API_KEY=${OMNIVOICE_API_KEY:?set OMNIVOICE_API_KEY}
+      # NPM domain se "origin"/403 error aaye to apna test domain yahan daalein:
+      # - OMNIVOICE_ALLOWED_ORIGINS=https://vs-test.echowkidar.in
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3900/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  vs_upstream_test_data:
+
+networks:
+  proxy:
+    external: true
